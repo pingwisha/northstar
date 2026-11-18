@@ -152,6 +152,18 @@ export function scoped(db: D1Database, userId: string) {
 			return 'saved';
 		},
 
+		// Checks or unchecks one task. Only tasks of the person's active goals can change;
+		// the first check time is kept when a done task is checked again.
+		async setTaskCompleted(taskId: string, done: boolean, now: Date = new Date()): Promise<boolean> {
+			const r = await db
+				.prepare(
+					"UPDATE tasks SET completed_at = CASE WHEN ?1 THEN COALESCE(completed_at, ?2) ELSE NULL END WHERE id = ?3 AND user_id = ?4 AND goal_id IN (SELECT id FROM goals WHERE user_id = ?4 AND status = 'active')"
+				)
+				.bind(done ? 1 : 0, now.toISOString(), taskId, userId)
+				.run();
+			return r.meta.changes > 0;
+		},
+
 		async setGoalStatus(goalId: string, status: GoalStatus): Promise<boolean> {
 			const r = await db.prepare('UPDATE goals SET status = ? WHERE id = ? AND user_id = ?').bind(status, goalId, userId).run();
 			return r.meta.changes > 0;

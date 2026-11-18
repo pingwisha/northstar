@@ -14,8 +14,8 @@ const bindings = [
 
 // A fresh local D1 with the real migrations and the seeded people for every run.
 const seed = [
-	`INSERT INTO users (id, email, role) VALUES ('${E2E.owner.id}', '${E2E.owner.email}', 'owner'), ('${E2E.goals.id}', '${E2E.goals.email}', 'member')`,
-	`INSERT INTO invites (email) VALUES ('${E2E.goals.email}')`
+	`INSERT INTO users (id, email, role) VALUES ('${E2E.owner.id}', '${E2E.owner.email}', 'owner'), ('${E2E.goals.id}', '${E2E.goals.email}', 'member'), ('${E2E.home.id}', '${E2E.home.email}', 'member')`,
+	`INSERT INTO invites (email) VALUES ('${E2E.goals.email}'), ('${E2E.home.email}')`
 ].join('; ');
 const prepareDb = ['rm -rf .wrangler/state', 'npx wrangler d1 migrations apply northstar --local', `npx wrangler d1 execute northstar --local --command "${seed}"`].join(' && ');
 
