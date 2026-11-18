@@ -12,10 +12,11 @@ Do: агент даёт инструкцию, как создать пустой
 Done-when: `git remote -v` показывает адрес, на GitHub репозиторий отмечен как Private.
 Progress: готово 2026-11-18, репозиторий https://github.com/pingwisha/northstar (Private), создан агентом через gh, который уже вошёл в аккаунт pingwisha.
 
-### 0.2 Каркас сайта — [ ]
+### 0.2 Каркас сайта — [x]
 Владелец: agent
 Do: создать `app/` на SvelteKit с TypeScript, Tailwind, адаптером Cloudflare, тестами (Vitest, Playwright). Файл `.gitignore` закрывает `.env`, `node_modules`, `.wrangler`.
 Done-when: `npm run check`, `npm run test` и `npm run build` проходят.
+Progress: готово 2026-11-18. Проверены check, unit-тест, build и один Playwright-тест (npx playwright test). Скрипт `npm run test` запускает unit и e2e вместе. Каркас взят из language-tracker без его уроков и словарей.
 
 ### 0.3 Cloudflare и вход через Google: что нужно от Мэри — [ ]
 Владелец: human
