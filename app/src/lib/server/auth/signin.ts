@@ -11,6 +11,10 @@ export interface AuthEnv {
 	SESSION_SECRET: string;
 	// The owner's Google emails, comma-separated.
 	ALLOWED_EMAILS: string;
+	// Server-only AI settings, read by src/lib/server/ai.ts.
+	GEMINI_API_KEY?: string;
+	AI_MODEL?: string;
+	DAILY_LIMIT?: string;
 }
 
 export type SignInFailure = 'state' | 'exchange' | 'id_token' | 'unverified' | 'not_allowed';
