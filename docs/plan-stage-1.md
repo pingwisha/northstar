@@ -24,10 +24,11 @@ Do: агент пишет пошаговую инструкцию, как соз
 Done-when: в `.env` заполнены нужные имена, `.env` не отслеживается git.
 Progress: готово 2026-11-18. Ключ Google создан, значения в `.env`, токен Cloudflare взят тот же, что у language-tracker. Ключ ИИ (GEMINI_API_KEY) остаётся на шаг 1.3. Адрес для Google на сайте: https://northstar.pages.dev/auth/google/callback, поправить при публикации, если имя будет другим.
 
-### 0.4 База данных — [ ]
+### 0.4 База данных — [x]
 Владелец: agent
 Do: схема D1 в `migrations/`: пользователи, список приглашённых, цели, этапы, задачи, материалы, записи прогресса, сообщения чата.
 Done-when: миграции применяются на пустой базе, тесты базы проходят.
+Progress: готово 2026-11-18. `migrations/0001_foundation.sql`: users (с ролью owner или member), invites, goals, stages, tasks, materials, chats, chat_messages, ai_usage. 6 тестов базы проходят (`npm run test:db`).
 
 ### 0.5 Вход через Google и список приглашённых — [ ]
 Владелец: agent

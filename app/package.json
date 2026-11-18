@@ -18,7 +18,7 @@
 		"test": "npm run test:unit -- --run && npm run test:e2e",
 		"test:e2e": "playwright install && playwright test",
 		"gen": "wrangler types",
-		"test:db": "vitest --run --project server src/lib/server"
+		"test:db": "vitest --run --project server tests/db"
 	},
 	"devDependencies": {
 		"@fontsource-variable/geist": "^5.3.0",

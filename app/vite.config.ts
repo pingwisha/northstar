@@ -44,7 +44,7 @@ export default defineConfig({
 					// Each test starts a local D1; on a busy machine that takes longer than the defaults.
 					testTimeout: 60_000,
 					hookTimeout: 60_000,
-					include: ['src/**/*.{test,spec}.{js,ts}'],
+					include: ['src/**/*.{test,spec}.{js,ts}', 'tests/**/*.{test,spec}.{js,ts}'],
 					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
 				}
 			}
