@@ -1,0 +1,9 @@
+node_modules/
+.svelte-kit/
+.wrangler/
+.env
+.env.*
+!.env.example
+*.tfstate*
+*.tfvars
+.terraform/
