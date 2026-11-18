@@ -9,7 +9,8 @@ export const E2E = {
 	owner: { id: 'e2e-owner', email: 'e2e@example.com' },
 	// Every spec file owns a person, so tests in different files never see each other's data.
 	goals: { id: 'e2e-goals', email: 'e2e-goals@example.com' },
-	home: { id: 'e2e-home', email: 'e2e-home@example.com' }
+	home: { id: 'e2e-home', email: 'e2e-home@example.com' },
+	replan: { id: 'e2e-replan', email: 'e2e-replan@example.com' }
 } as const;
 
 type Person = { id: string; email: string };

@@ -164,6 +164,19 @@ export function scoped(db: D1Database, userId: string) {
 			return r.meta.changes > 0;
 		},
 
+		// Moves tasks to new days. The user and goal are part of every write, and only open
+		// tasks move, so a done task keeps its date.
+		async moveTasks(goalId: string, moves: { id: string; to: string }[]): Promise<void> {
+			if (moves.length === 0) return;
+			await db.batch(
+				moves.map((m) =>
+					db
+						.prepare("UPDATE tasks SET planned_for = ? WHERE id = ? AND goal_id = ? AND user_id = ? AND completed_at IS NULL AND goal_id IN (SELECT id FROM goals WHERE user_id = ? AND status = 'active')")
+						.bind(m.to, m.id, goalId, userId, userId)
+				)
+			);
+		},
+
 		async setGoalStatus(goalId: string, status: GoalStatus): Promise<boolean> {
 			const r = await db.prepare('UPDATE goals SET status = ? WHERE id = ? AND user_id = ?').bind(status, goalId, userId).run();
 			return r.meta.changes > 0;

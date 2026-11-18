@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_TASKS, parseMaterials, parsePlan, schedulePlan, targetTaskCount, type PlanStage } from './plan';
+import { MAX_TASKS, parseMaterials, parsePlan, replan, schedulePlan, targetTaskCount, type PlanStage } from './plan';
 import { daysUntil } from './progress';
 
 const task = (title: string, weight = 1) => ({ title, weight, materials: [] });
@@ -107,5 +107,38 @@ describe('parseMaterials', () => {
 	it('keeps at most three materials per task', () => {
 		const many = Array.from({ length: 6 }, (_, i) => ({ kind: 'other', title: `М${i}`, source: 'поиск' }));
 		expect(parseMaterials(JSON.stringify({ materials: [many] }), 1)[0]).toHaveLength(3);
+	});
+});
+
+describe('replan', () => {
+	const t = (id: string, plannedFor: string, done = false, weight = 1) => ({ id, plannedFor, weight, done });
+	const today = '2026-11-18';
+
+	it('moves overdue tasks into the days left, never past the deadline', () => {
+		const tasks = [t('1', '2026-11-10'), t('2', '2026-11-11'), t('3', '2026-11-12'), t('4', '2026-11-13')];
+		const r = replan(tasks, today, '2026-11-30');
+		expect(r.changed).toBe(true);
+		expect(r.moves.every((m) => m.to >= today && m.to < '2026-11-30')).toBe(true);
+		expect(r.summary).toContain('Просроченных было 4');
+	});
+
+	it('leaves done tasks alone and keeps the order of the open ones', () => {
+		const tasks = [t('1', '2026-11-10', true), t('2', '2026-11-11'), t('3', '2026-11-12')];
+		const r = replan(tasks, today, '2026-12-18');
+		expect(r.moves.find((m) => m.id === '1')).toBeUndefined();
+		const dates = r.moves.map((m) => m.to);
+		expect([...dates].sort()).toEqual(dates);
+	});
+
+	it('says nothing to do when all is done or already even', () => {
+		expect(replan([t('1', '2026-11-10', true)], today, '2026-12-18')).toMatchObject({ changed: false, moves: [] });
+		const first = replan([t('1', '2026-11-10'), t('2', '2026-11-11')], today, '2026-12-18');
+		const settled = [t('1', first.moves[0].to), t('2', first.moves[1].to)];
+		expect(replan(settled, today, '2026-12-18').changed).toBe(false);
+	});
+
+	it('warns when the load is heavy', () => {
+		const tasks = Array.from({ length: 20 }, (_, i) => t(String(i), '2026-11-01'));
+		expect(replan(tasks, today, '2026-11-22').summary).toContain('подвинуть срок');
 	});
 });

@@ -2,6 +2,8 @@ import { error, fail } from '@sveltejs/kit';
 import { buildCards } from '$lib/goal-view';
 import { MAX_ACTIVE_GOALS, parseDeadline, parseNewGoal, todayIso } from '$lib/goals';
 import { scoped } from '$lib/server/db';
+import { replan } from '$lib/plan';
+import { daysUntil } from '$lib/progress';
 import { generatePlan, type PlanError } from '$lib/server/plan';
 import { appEnv } from '$lib/server/env';
 import type { Actions, PageServerLoad } from './$types';
@@ -61,6 +63,21 @@ export const actions: Actions = {
 		const goalId = field(await request.formData(), 'id');
 		if (!(await me.setGoalStatus(goalId, 'done'))) return fail(404, { action: 'finish', goalId, message: 'Такой цели нет.' });
 		return { action: 'finish', ok: true };
+	},
+
+	behind: async ({ request, locals, platform }) => {
+		const me = await mine(locals, platform);
+		const goalId = field(await request.formData(), 'id');
+		const goal = (await me.listGoals()).find((g) => g.id === goalId && g.status === 'active');
+		if (!goal) return fail(404, { action: 'behind', goalId, message: 'Такой цели нет.' });
+		const today = todayIso();
+		if (daysUntil(today, goal.deadline) < 0) return fail(400, { action: 'behind', goalId, message: PLAN_MESSAGES.deadline_passed });
+		const own = (await me.listGoalTasks()).filter((t) => t.goal_id === goal.id);
+		if (own.length === 0) return fail(400, { action: 'behind', goalId, message: 'У цели ещё нет плана, пересчитывать нечего.' });
+
+		const result = replan(own.map((t) => ({ id: t.id, plannedFor: t.planned_for, weight: t.weight, done: t.completed_at !== null })), today, goal.deadline);
+		await me.moveTasks(goal.id, result.moves);
+		return { action: 'behind', ok: true, goalId, summary: result.summary };
 	},
 
 	plan: async ({ request, locals, platform }) => {

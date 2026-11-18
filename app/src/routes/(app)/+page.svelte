@@ -80,6 +80,7 @@
 				<ul class="flex flex-col gap-2" data-testid="overdue-list">
 					{#each home.overdue.slice(0, OVERDUE_SHOWN) as task (task.id)}{@render row(task)}{/each}
 				</ul>
+				<a href="/goals" class="text-sm underline">Отстаёшь? Пересчитай план на странице целей.</a>
 				{#if home.overdue.length > OVERDUE_SHOWN}
 					<p class="text-sm text-muted-foreground">И ещё {home.overdue.length - OVERDUE_SHOWN} из прошлых дней.</p>
 				{/if}

@@ -105,6 +105,20 @@
 					{/if}
 				{/if}
 
+				{#if card.pace.state === 'behind'}
+					<form method="POST" action="?/behind" use:enhance>
+						<input type="hidden" name="id" value={card.id} />
+						<button type="submit" class="h-11 w-full rounded-md border-2 border-destructive px-4 text-sm font-medium text-destructive">Я отстаю: пересчитать план</button>
+					</form>
+				{/if}
+				{#if form?.action === 'behind' && form.goalId === card.id}
+					{#if 'summary' in form && form.summary}
+						<p class="rounded-md bg-muted p-3 text-sm" data-testid="replan-summary">{form.summary}</p>
+					{:else if form.message}
+						<p role="alert" class="text-sm text-destructive">{form.message}</p>
+					{/if}
+				{/if}
+
 				<div class="flex flex-wrap gap-2">
 					<button type="button" class="h-10 rounded-md border px-3 text-sm" onclick={() => (editing = editing === card.id ? null : card.id)}>Изменить срок</button>
 					<form method="POST" action="?/finish" use:enhance>

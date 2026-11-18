@@ -77,3 +77,39 @@ describe('the goals page actions', () => {
 		expect((await scoped(db, 'a').listGoals())[0]).toMatchObject({ deadline: '2031-01-01', status: 'done' });
 	});
 });
+
+describe('«Я отстаю»', () => {
+	const addTasks = async (userId: string, goalId: string, days: string[]) => {
+		await db.batch(days.map((d, i) => db.prepare('INSERT INTO tasks (id, user_id, goal_id, title, planned_for) VALUES (?, ?, ?, ?, ?)').bind(`${userId}-${goalId}-${i}`, userId, goalId, `З${i}`, d)));
+	};
+	const behind = (userId: string, id: string) => actions.behind!(as(userId, post({ id })));
+
+	it('moves overdue tasks to today or later and keeps the deadline', async () => {
+		const id = await scoped(db, 'a').addGoal(goal, '2026-01-01');
+		await addTasks('a', id, ['2026-01-02', '2026-01-03', '2026-01-04']);
+		const result = (await behind('a', id)) as { ok?: boolean; summary?: string };
+		expect(result.ok).toBe(true);
+		const rows = await scoped(db, 'a').listGoalTasks();
+		expect(rows.every((t) => t.planned_for >= '2026-01-02')).toBe(true);
+		expect(rows.some((t) => t.planned_for < new Date().toISOString().slice(0, 10) && t.completed_at === null)).toBe(false);
+		expect(rows.every((t) => t.planned_for < goal.deadline)).toBe(true);
+		expect((await scoped(db, 'a').listGoals())[0].deadline).toBe(goal.deadline);
+	});
+
+	it('does not move another person\'s tasks', async () => {
+		const id = await scoped(db, 'a').addGoal(goal, '2026-01-01');
+		await addTasks('a', id, ['2026-01-02']);
+		const result = await behind('b', id);
+		expect(result).toMatchObject({ status: 404 });
+		expect((await scoped(db, 'a').listGoalTasks())[0].planned_for).toBe('2026-01-02');
+	});
+
+	it('keeps the date of a done task', async () => {
+		const id = await scoped(db, 'a').addGoal(goal, '2026-01-01');
+		await addTasks('a', id, ['2026-01-02', '2026-01-03']);
+		await scoped(db, 'a').setTaskCompleted('a-' + id + '-0', true);
+		await behind('a', id);
+		const rows = await scoped(db, 'a').listGoalTasks();
+		expect(rows.find((t) => t.id === 'a-' + id + '-0')!.planned_for).toBe('2026-01-02');
+	});
+});

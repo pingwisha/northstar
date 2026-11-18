@@ -166,19 +166,70 @@ export interface ScheduledStage {
 
 const addDays = (iso: string, n: number): string => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 
-// Spreads the tasks over the days from today to the deadline. A heavier task takes more
-// room before the next one. With a week or more to go, the last day is left free as a buffer.
-export function schedulePlan(stages: PlanStage[], today: string, deadline: string): ScheduledStage[] {
-	const span = Math.max(1, daysUntil(today, deadline) >= 7 ? daysUntil(today, deadline) : daysUntil(today, deadline) + 1);
-	const all = stages.flatMap((s) => s.tasks);
-	const totalWeight = all.reduce((sum, t) => sum + t.weight, 0);
+// Dates for a row of tasks, one per weight, spread from today to the deadline. A heavier
+// task takes more room before the next one. With a week or more to go, the last day is
+// left free as a buffer.
+export function spreadDates(weights: number[], today: string, deadline: string): string[] {
+	const days = daysUntil(today, deadline);
+	const span = Math.max(1, days >= 7 ? days : days + 1);
+	const totalWeight = weights.reduce((sum, w) => sum + w, 0);
 	let before = 0;
+	return weights.map((w) => {
+		const offset = Math.min(span - 1, Math.floor((before / totalWeight) * span));
+		before += w;
+		return addDays(today, offset);
+	});
+}
+
+export function schedulePlan(stages: PlanStage[], today: string, deadline: string): ScheduledStage[] {
+	const dates = spreadDates(stages.flatMap((s) => s.tasks.map((t) => t.weight)), today, deadline);
+	let i = 0;
 	return stages.map((stage) => {
-		const tasks = stage.tasks.map((task): ScheduledTask => {
-			const offset = Math.min(span - 1, Math.floor((before / totalWeight) * span));
-			before += task.weight;
-			return { ...task, plannedFor: addDays(today, offset) };
-		});
+		const tasks = stage.tasks.map((task): ScheduledTask => ({ ...task, plannedFor: dates[i++] }));
 		return { title: stage.title, dueDate: tasks[tasks.length - 1].plannedFor, tasks };
 	});
+}
+
+export interface ReplanTask {
+	id: string;
+	plannedFor: string;
+	weight: number;
+	done: boolean;
+}
+
+export interface Replan {
+	moves: { id: string; to: string }[];
+	// A plain-language account of what changed, built from the numbers, not by the AI.
+	summary: string;
+	changed: boolean;
+}
+
+const countWord = (n: number, one: string, few: string, many: string): string => {
+	const m10 = n % 10;
+	const m100 = n % 100;
+	return `${n} ${m10 === 1 && m100 !== 11 ? one : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? few : many}`;
+};
+
+// Re-spreads the tasks not done yet over the days left, in their current order. Done tasks
+// stay as they are and the deadline never moves, so nothing can land after it. The caller
+// guarantees the deadline has not passed.
+export function replan(tasks: ReplanTask[], today: string, deadline: string): Replan {
+	const open = tasks.filter((t) => !t.done);
+	if (open.length === 0) return { moves: [], summary: 'Все задачи уже сделаны, пересчитывать нечего.', changed: false };
+
+	const overdue = open.filter((t) => t.plannedFor < today).length;
+	const dates = spreadDates(open.map((t) => t.weight), today, deadline);
+	const moves = open.flatMap((t, i) => (dates[i] !== t.plannedFor ? [{ id: t.id, to: dates[i] }] : []));
+	if (moves.length === 0) return { moves, summary: 'План уже ровный: сдвигать нечего. Просто делай задачи по порядку.', changed: false };
+
+	const days = Math.max(1, daysUntil(today, deadline) >= 7 ? daysUntil(today, deadline) : daysUntil(today, deadline) + 1);
+	const perDay = Math.round((open.length / days) * 10) / 10;
+	const parts = [
+		`Сдвинуто ${countWord(moves.length, 'задача', 'задачи', 'задач')} из ${open.length} несделанных.`,
+		overdue > 0 ? `Просроченных было ${overdue}, теперь все они разложены на оставшиеся дни.` : null,
+		`Последняя задача теперь на ${dates[dates.length - 1].split('-').reverse().join('.')}, срок цели не изменился.`,
+		`В среднем ${String(perDay).replace('.', ',')} задачи в день.`,
+		perDay > 3 ? 'Это много. Если не получается, лучше честно подвинуть срок цели.' : null
+	];
+	return { moves, summary: parts.filter(Boolean).join(' '), changed: true };
 }
