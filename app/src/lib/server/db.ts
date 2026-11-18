@@ -3,6 +3,8 @@
 // invite helpers are the exceptions: they run before a user id exists, or on
 // behalf of the owner, whose role the caller has already checked.
 
+import type { ScheduledStage } from '$lib/plan';
+
 export type Role = 'owner' | 'member';
 
 export interface User {
@@ -39,6 +41,8 @@ export interface GoalTaskRow {
 	weight: number;
 	completed_at: string | null;
 }
+
+export type SavePlanResult = 'saved' | 'not_found' | 'has_plan';
 
 const normalize = (email: string): string => email.trim().toLowerCase();
 
@@ -112,6 +116,40 @@ export function scoped(db: D1Database, userId: string) {
 		async setDeadline(goalId: string, deadline: string): Promise<boolean> {
 			const r = await db.prepare("UPDATE goals SET deadline = ? WHERE id = ? AND user_id = ? AND status = 'active'").bind(deadline, goalId, userId).run();
 			return r.meta.changes > 0;
+		},
+
+		// Stores a plan for a goal that has none. Everything is written in batches that
+		// either all apply or none, so a failure never leaves half a plan.
+		async savePlan(goalId: string, stages: ScheduledStage[]): Promise<SavePlanResult> {
+			const goal = await db.prepare("SELECT id FROM goals WHERE id = ? AND user_id = ? AND status = 'active'").bind(goalId, userId).first();
+			if (!goal) return 'not_found';
+			const existing = await db.prepare('SELECT COUNT(*) AS n FROM tasks WHERE goal_id = ? AND user_id = ?').bind(goalId, userId).first<{ n: number }>();
+			if (existing!.n > 0) return 'has_plan';
+
+			const statements: D1PreparedStatement[] = [];
+			stages.forEach((stage, position) => {
+				const stageId = crypto.randomUUID();
+				statements.push(
+					db.prepare('INSERT INTO stages (id, user_id, goal_id, position, title, due_date) VALUES (?, ?, ?, ?, ?, ?)').bind(stageId, userId, goalId, position, stage.title, stage.dueDate)
+				);
+				for (const task of stage.tasks) {
+					const taskId = crypto.randomUUID();
+					statements.push(
+						db
+							.prepare('INSERT INTO tasks (id, user_id, goal_id, stage_id, title, planned_for, weight) VALUES (?, ?, ?, ?, ?, ?, ?)')
+							.bind(taskId, userId, goalId, stageId, task.title, task.plannedFor, task.weight)
+					);
+					for (const m of task.materials) {
+						statements.push(
+							db
+								.prepare('INSERT INTO materials (id, user_id, task_id, kind, title, url, source) VALUES (?, ?, ?, ?, ?, ?, ?)')
+								.bind(crypto.randomUUID(), userId, taskId, m.kind, m.title, m.url, m.source)
+						);
+					}
+				}
+			});
+			await db.batch(statements);
+			return 'saved';
 		},
 
 		async setGoalStatus(goalId: string, status: GoalStatus): Promise<boolean> {

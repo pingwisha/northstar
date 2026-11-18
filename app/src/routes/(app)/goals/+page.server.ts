@@ -2,6 +2,7 @@ import { error, fail } from '@sveltejs/kit';
 import { buildCards } from '$lib/goal-view';
 import { MAX_ACTIVE_GOALS, parseDeadline, parseNewGoal, todayIso } from '$lib/goals';
 import { scoped } from '$lib/server/db';
+import { generatePlan, type PlanError } from '$lib/server/plan';
 import { appEnv } from '$lib/server/env';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -17,6 +18,15 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 	const today = todayIso();
 	const [goals, tasks] = await Promise.all([me.listGoals(), me.listGoalTasks()]);
 	return { today, ...buildCards(goals, tasks, today) };
+};
+
+const PLAN_MESSAGES: Record<PlanError, string> = {
+	not_available: 'ИИ пока доступен только владельцу сайта.',
+	not_configured: 'ИИ ещё не подключён: нет ключа.',
+	limit_reached: 'На сегодня лимит запросов к ИИ исчерпан. Попробуй завтра.',
+	ai_unavailable: 'ИИ сейчас не отвечает. Попробуй через несколько минут.',
+	bad_answer: 'ИИ не смог составить план в нужном виде. Попробуй ещё раз.',
+	deadline_passed: 'Срок цели уже прошёл. Сначала измени срок.'
 };
 
 const field = (data: FormData, name: string) => String(data.get(name) ?? '');
@@ -51,5 +61,21 @@ export const actions: Actions = {
 		const goalId = field(await request.formData(), 'id');
 		if (!(await me.setGoalStatus(goalId, 'done'))) return fail(404, { action: 'finish', goalId, message: 'Такой цели нет.' });
 		return { action: 'finish', ok: true };
+	},
+
+	plan: async ({ request, locals, platform }) => {
+		const env = await appEnv(platform);
+		const me = await mine(locals, platform);
+		const goalId = field(await request.formData(), 'id');
+		const goal = (await me.listGoals()).find((g) => g.id === goalId && g.status === 'active');
+		if (!goal) return fail(404, { action: 'plan', goalId, message: 'Такой цели нет.' });
+
+		const result = await generatePlan(env!, { userId: locals.userId!, role: locals.role ?? 'member' }, goal, todayIso());
+		if (!result.ok) return fail(result.error === 'not_available' ? 403 : 502, { action: 'plan', goalId, message: PLAN_MESSAGES[result.error] });
+
+		const saved = await me.savePlan(goal.id, result.stages);
+		if (saved === 'has_plan') return fail(409, { action: 'plan', goalId, message: 'У этой цели уже есть план.' });
+		if (saved === 'not_found') return fail(404, { action: 'plan', goalId, message: 'Такой цели нет.' });
+		return { action: 'plan', ok: true };
 	}
 };

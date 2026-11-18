@@ -35,6 +35,9 @@ export type AiResult =
 export interface AiOptions {
 	temperature?: number;
 	maxTokens?: number;
+	// Ask for a JSON object (used for plans); chat answers are plain text.
+	json?: boolean;
+	timeoutMs?: number;
 	fetch?: typeof fetch;
 	now?: () => Date;
 }
@@ -88,9 +91,10 @@ export async function askAi(env: AiEnv, caller: AiCaller, messages: ChatMessage[
 				model: env.AI_MODEL || DEFAULT_MODEL,
 				messages,
 				...(options.temperature !== undefined && { temperature: options.temperature }),
-				...(options.maxTokens !== undefined && { max_tokens: options.maxTokens })
+				...(options.maxTokens !== undefined && { max_tokens: options.maxTokens }),
+				...(options.json && { response_format: { type: 'json_object' } })
 			}),
-			signal: AbortSignal.timeout(TIMEOUT_MS)
+			signal: AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_MS)
 		});
 		if (!res.ok) return { ok: false, error: 'ai_unavailable' };
 		const data = (await res.json()) as { choices?: { message?: { content?: unknown } }[] };

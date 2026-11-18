@@ -9,6 +9,7 @@
 	const finished = $derived(data.cards.filter((c) => c.status !== 'active'));
 	let adding = $state(false);
 	let editing = $state<string | null>(null);
+	let planning = $state<string | null>(null);
 
 	const paceClass = { on_track: 'text-foreground', ahead: 'text-foreground', behind: 'text-destructive' } as const;
 </script>
@@ -78,6 +79,28 @@
 						<button type="submit" class="h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">Сохранить срок</button>
 					</form>
 					{#if form?.action === 'deadline' && form.goalId === card.id && form.message}
+						<p role="alert" class="text-sm text-destructive">{form.message}</p>
+					{/if}
+				{/if}
+
+				{#if card.taskCount === 0}
+					<form
+						method="POST"
+						action="?/plan"
+						use:enhance={() => {
+							planning = card.id;
+							return async ({ update }) => {
+								await update();
+								planning = null;
+							};
+						}}
+					>
+						<input type="hidden" name="id" value={card.id} />
+						<button type="submit" disabled={planning !== null} class="h-11 w-full rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-60">
+							{planning === card.id ? 'ИИ строит план, это займёт до минуты…' : 'Построить план'}
+						</button>
+					</form>
+					{#if form?.action === 'plan' && form.goalId === card.id && form.message}
 						<p role="alert" class="text-sm text-destructive">{form.message}</p>
 					{/if}
 				{/if}
