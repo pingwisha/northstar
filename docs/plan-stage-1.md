@@ -18,10 +18,11 @@ Do: создать `app/` на SvelteKit с TypeScript, Tailwind, адаптер
 Done-when: `npm run check`, `npm run test` и `npm run build` проходят.
 Progress: готово 2026-11-18. Проверены check, unit-тест, build и один Playwright-тест (npx playwright test). Скрипт `npm run test` запускает unit и e2e вместе. Каркас взят из language-tracker без его уроков и словарей.
 
-### 0.3 Cloudflare и вход через Google: что нужно от Мэри — [ ]
+### 0.3 Cloudflare и вход через Google: что нужно от Мэри — [x]
 Владелец: human
 Do: агент пишет пошаговую инструкцию, как создать в Google Cloud ключ для входа (OAuth client, тип Web application) и как создать токен Cloudflare. Мэри кладёт значения в файл `.env`. Значения нигде не показываются в чате и не попадают в git.
 Done-when: в `.env` заполнены нужные имена, `.env` не отслеживается git.
+Progress: готово 2026-11-18. Ключ Google создан, значения в `.env`, токен Cloudflare взят тот же, что у language-tracker. Ключ ИИ (GEMINI_API_KEY) остаётся на шаг 1.3. Адрес для Google на сайте: https://northstar.pages.dev/auth/google/callback, поправить при публикации, если имя будет другим.
 
 ### 0.4 База данных — [ ]
 Владелец: agent
