@@ -31,6 +31,12 @@ test('the calendar shows every planned day and a day opens its tasks', async ({ 
 	await expect(page.getByTestId('day-tasks')).toContainText('Собрать материалы');
 	await expect(page.getByTestId('day-tasks')).not.toContainText('Написать план проекта');
 
+	// Checking a task on another day keeps that day open (it must not jump back to today).
+	await page.getByRole('checkbox', { name: 'Отметить: Собрать материалы' }).click();
+	await expect(page.getByRole('checkbox', { name: 'Снять отметку: Собрать материалы' })).toBeVisible();
+	await expect(page).toHaveURL(new RegExp(`day=${later}`));
+	await expect(page.getByTestId('day-tasks')).toContainText('Собрать материалы');
+
 	// An empty day says so, and the month can be turned.
 	await page.goto(`/calendar?month=${today.slice(0, 7)}&day=${addDays(today, 40)}`);
 	await expect(page.getByTestId('day-empty')).toBeVisible();

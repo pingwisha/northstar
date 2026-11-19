@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
 
 	// A form to add one task, or several at once, one per line. Posts to the "addTask" action of the page.
 	let {
@@ -15,6 +16,8 @@
 	} = $props();
 	let open = $state(false);
 	const failed = $derived(form?.action === 'addTask' && form.message ? form : null);
+	// Keep ?month and ?day in the address so the page stays where the person was.
+	const act = (name: string) => `${page.url.search}${page.url.search ? '&' : '?'}/${name}`;
 </script>
 
 {#if goals.length}
@@ -25,7 +28,7 @@
 		{#if open || failed}
 			<form
 				method="POST"
-				action="?/addTask"
+				action={act('addTask')}
 				use:enhance={() => async ({ update, result }) => { await update({ reset: result.type === 'success' }); if (result.type === 'success') open = false; }}
 				class="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm"
 				data-testid="add-task"

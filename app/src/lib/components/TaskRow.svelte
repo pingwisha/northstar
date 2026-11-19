@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
 	import type { HomeTask } from '$lib/home-view';
 
 	// One task with its checkbox and materials, and a menu to rename, move or delete it.
@@ -8,11 +9,13 @@
 	const KIND: Record<string, string> = { article: 'Статья', video: 'Видео', trainer: 'Тренажёр', checklist: 'Чек-лист', other: 'Материал' };
 	let editing = $state(false);
 	let confirmDelete = $state(false);
+	// Keep ?month and ?day in the address so the page stays where the person was.
+	const act = (name: string) => `${page.url.search}${page.url.search ? '&' : '?'}/${name}`;
 </script>
 
 <li class="flex flex-col gap-3 rounded-xl border bg-card p-3 shadow-sm" data-testid="task">
 	<div class="flex items-center gap-3">
-		<form method="POST" action="?/check" use:enhance class="contents">
+		<form method="POST" action={act('check')} use:enhance class="contents">
 			<input type="hidden" name="id" value={task.id} />
 			<input type="hidden" name="done" value={task.done ? '0' : '1'} />
 			<button
@@ -59,7 +62,7 @@
 
 	{#if editing}
 		<div class="flex flex-col gap-3 border-t pt-3">
-			<form method="POST" action="?/editTask" use:enhance={() => async ({ update, result }) => { await update({ reset: false }); if (result.type === 'success') editing = false; }} class="flex flex-col gap-2">
+			<form method="POST" action={act('editTask')} use:enhance={() => async ({ update, result }) => { await update({ reset: false }); if (result.type === 'success') editing = false; }} class="flex flex-col gap-2">
 				<input type="hidden" name="id" value={task.id} />
 				<label class="flex flex-col gap-1 text-sm">
 					Название
@@ -73,7 +76,7 @@
 			</form>
 
 			{#if confirmDelete}
-				<form method="POST" action="?/deleteTask" use:enhance class="flex flex-col gap-2">
+				<form method="POST" action={act('deleteTask')} use:enhance class="flex flex-col gap-2">
 					<input type="hidden" name="id" value={task.id} />
 					<p class="text-sm">Удалить задачу насовсем? Процент цели пересчитается.</p>
 					<div class="flex gap-2">
