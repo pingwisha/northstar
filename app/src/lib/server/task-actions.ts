@@ -2,6 +2,7 @@
 // behave the same. The person comes only from the verified session set by hooks.server.ts.
 import { error, fail, type RequestEvent } from '@sveltejs/kit';
 import { todayIso } from '$lib/goals';
+import { MAX_OWN_MATERIALS, parseMaterialLink, parseNote } from '$lib/materials';
 import { parseOneTitle, parseTaskDay, parseTaskTitles } from '$lib/tasks';
 import { scoped } from './db';
 import { appEnv } from './env';
@@ -58,5 +59,33 @@ export const taskActions = {
 		const taskId = field(await event.request.formData(), 'id');
 		if (!(await me.deleteTask(taskId))) return fail(404, { action: 'deleteTask', taskId, message: NO_TASK });
 		return { action: 'deleteTask', ok: true };
+	},
+
+	addMaterial: async (event: RequestEvent) => {
+		const me = await mine(event);
+		const data = await event.request.formData();
+		const taskId = field(data, 'id');
+		const link = parseMaterialLink(field(data, 'title'), field(data, 'url'));
+		if (!link.ok) return fail(400, { action: 'addMaterial', taskId, message: link.message });
+		if ((await me.countOwnMaterials(taskId)) >= MAX_OWN_MATERIALS) return fail(400, { action: 'addMaterial', taskId, message: `К одной задаче можно добавить до ${MAX_OWN_MATERIALS} своих ссылок.` });
+		if (!(await me.addOwnMaterial(taskId, link.value.title, link.value.url))) return fail(404, { action: 'addMaterial', taskId, message: NO_TASK });
+		return { action: 'addMaterial', ok: true };
+	},
+
+	deleteMaterial: async (event: RequestEvent) => {
+		const me = await mine(event);
+		const id = field(await event.request.formData(), 'materialId');
+		if (!(await me.deleteOwnMaterial(id))) return fail(404, { action: 'deleteMaterial', message: 'Удалить можно только свою ссылку.' });
+		return { action: 'deleteMaterial', ok: true };
+	},
+
+	saveNote: async (event: RequestEvent) => {
+		const me = await mine(event);
+		const data = await event.request.formData();
+		const taskId = field(data, 'id');
+		const note = parseNote(field(data, 'note'));
+		if (!note.ok) return fail(400, { action: 'saveNote', taskId, message: note.message });
+		if (!(await me.setTaskNote(taskId, note.value))) return fail(404, { action: 'saveNote', taskId, message: NO_TASK });
+		return { action: 'saveNote', ok: true };
 	}
 };

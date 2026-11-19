@@ -40,6 +40,7 @@ export interface GoalTaskRow {
 	planned_for: string;
 	weight: number;
 	completed_at: string | null;
+	note: string | null;
 }
 
 export interface ChatMessageRow {
@@ -49,6 +50,8 @@ export interface ChatMessageRow {
 }
 
 export interface MaterialRow {
+	id: string;
+	own: number;
 	task_id: string;
 	kind: 'article' | 'video' | 'trainer' | 'checklist' | 'other';
 	title: string;
@@ -107,14 +110,48 @@ export function scoped(db: D1Database, userId: string) {
 		async listGoalTasks(): Promise<GoalTaskRow[]> {
 			return (
 				await db
-					.prepare('SELECT id, goal_id, title, planned_for, weight, completed_at FROM tasks WHERE user_id = ? ORDER BY planned_for, created_at, rowid')
+					.prepare('SELECT id, goal_id, title, planned_for, weight, completed_at, note FROM tasks WHERE user_id = ? ORDER BY planned_for, created_at, rowid')
 					.bind(userId)
 					.all<GoalTaskRow>()
 			).results;
 		},
 
 		async listMaterials(): Promise<MaterialRow[]> {
-			return (await db.prepare('SELECT task_id, kind, title, url, source FROM materials WHERE user_id = ? ORDER BY rowid').bind(userId).all<MaterialRow>()).results;
+			return (await db.prepare('SELECT id, own, task_id, kind, title, url, source FROM materials WHERE user_id = ? ORDER BY rowid').bind(userId).all<MaterialRow>()).results;
+		},
+
+		// Own links and notes: the task must be the person's and its goal still active.
+		async taskIsOpen(taskId: string): Promise<boolean> {
+			const row = await db
+				.prepare("SELECT 1 AS ok FROM tasks t JOIN goals g ON g.id = t.goal_id WHERE t.id = ? AND t.user_id = ? AND g.user_id = ? AND g.status = 'active'")
+				.bind(taskId, userId, userId)
+				.first();
+			return row !== null;
+		},
+
+		async countOwnMaterials(taskId: string): Promise<number> {
+			return (await db.prepare('SELECT COUNT(*) AS n FROM materials WHERE user_id = ? AND task_id = ? AND own = 1').bind(userId, taskId).first<{ n: number }>())!.n;
+		},
+
+		async addOwnMaterial(taskId: string, title: string, url: string): Promise<boolean> {
+			if (!(await this.taskIsOpen(taskId))) return false;
+			await db
+				.prepare("INSERT INTO materials (id, user_id, task_id, kind, title, url, source, own) VALUES (?, ?, ?, 'other', ?, ?, NULL, 1)")
+				.bind(crypto.randomUUID(), userId, taskId, title, url)
+				.run();
+			return true;
+		},
+
+		// Only materials the person added can be removed; the planned ones stay.
+		async deleteOwnMaterial(materialId: string): Promise<boolean> {
+			const r = await db.prepare('DELETE FROM materials WHERE id = ? AND user_id = ? AND own = 1').bind(materialId, userId).run();
+			return (r.meta.changes ?? 0) > 0;
+		},
+
+		async setTaskNote(taskId: string, note: string | null): Promise<boolean> {
+			if (!(await this.taskIsOpen(taskId))) return false;
+			await db.prepare('UPDATE tasks SET note = ? WHERE id = ? AND user_id = ?').bind(note, taskId, userId).run();
+			return true;
 		},
 
 		async countActiveGoals(): Promise<number> {

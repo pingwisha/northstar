@@ -14,8 +14,8 @@ const bindings = [
 
 // A fresh local D1 with the real migrations and the seeded people for every run.
 const seed = [
-	`INSERT INTO users (id, email, role) VALUES ('${E2E.owner.id}', '${E2E.owner.email}', 'owner'), ('${E2E.goals.id}', '${E2E.goals.email}', 'member'), ('${E2E.home.id}', '${E2E.home.email}', 'member'), ('${E2E.replan.id}', '${E2E.replan.email}', 'member'), ('${E2E.calendar.id}', '${E2E.calendar.email}', 'member'), ('${E2E.tasks.id}', '${E2E.tasks.email}', 'member')`,
-	`INSERT INTO invites (email) VALUES ('${E2E.goals.email}'), ('${E2E.home.email}'), ('${E2E.replan.email}'), ('${E2E.calendar.email}'), ('${E2E.tasks.email}')`
+	`INSERT INTO users (id, email, role) VALUES ('${E2E.owner.id}', '${E2E.owner.email}', 'owner'), ('${E2E.goals.id}', '${E2E.goals.email}', 'member'), ('${E2E.home.id}', '${E2E.home.email}', 'member'), ('${E2E.replan.id}', '${E2E.replan.email}', 'member'), ('${E2E.calendar.id}', '${E2E.calendar.email}', 'member'), ('${E2E.tasks.id}', '${E2E.tasks.email}', 'member'), ('${E2E.materials.id}', '${E2E.materials.email}', 'member')`,
+	`INSERT INTO invites (email) VALUES ('${E2E.goals.email}'), ('${E2E.home.email}'), ('${E2E.replan.email}'), ('${E2E.calendar.email}'), ('${E2E.tasks.email}'), ('${E2E.materials.email}')`
 ].join('; ');
 const prepareDb = ['rm -rf .wrangler/state', 'npx wrangler d1 migrations apply northstar --local', `npx wrangler d1 execute northstar --local --command "${seed}"`].join(' && ');
 

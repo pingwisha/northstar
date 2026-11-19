@@ -84,8 +84,8 @@ describe('home page', () => {
 		]);
 		const task = (await loadFor('a')).home.today[0];
 		expect(task.materials).toEqual([
-			{ kind: 'trainer', title: 'Тренажёр', url: 'https://example.com/', hint: null },
-			{ kind: 'article', title: 'Конспект', url: null, hint: 'учебник' }
+			{ id: 'm1', own: false, kind: 'trainer', title: 'Тренажёр', url: 'https://example.com/', hint: null },
+			{ id: 'm2', own: false, kind: 'article', title: 'Конспект', url: null, hint: 'учебник' }
 		]);
 		expect((await loadFor('b')).home.today).toEqual([]);
 	});

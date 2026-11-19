@@ -31,8 +31,9 @@ export function buildChatContext(goals: GoalData[], tasks: HomeTaskData[], today
 		lines.push('Ближайшие несделанные задачи по порядку:');
 		open.slice(0, TASKS_PER_GOAL).forEach((t, i) => {
 			lines.push(`${i + 1}. ${t.title}, на ${date(t.planned_for)}`);
+			if (t.note) lines.push(`   Заметка человека: ${t.note.replace(/\s+/g, ' ')}`);
 			for (const m of materials.filter((x) => x.task_id === t.id)) {
-				lines.push(`   Материал: ${m.title}. ${m.url ? `Ссылка: ${m.url}` : m.source ? `Где искать: ${m.source}` : ''}`.trimEnd());
+				lines.push(`   ${m.own === 1 ? 'Свой материал человека' : 'Материал'}: ${m.title}. ${m.url ? `Ссылка: ${m.url}` : m.source ? `Где искать: ${m.source}` : ''}`.trimEnd());
 			}
 		});
 		if (open.length > TASKS_PER_GOAL) lines.push(`И ещё ${open.length - TASKS_PER_GOAL} задач дальше по плану.`);
