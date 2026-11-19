@@ -27,4 +27,14 @@ describe('buildChatContext', () => {
 	it('leaves out finished goals', () => {
 		expect(buildChatContext([{ ...goal, status: 'done' }], [], '2026-11-18')).toContain('нет активных целей');
 	});
+
+	it('lists the materials of the next tasks with their links or hints', () => {
+		const text = buildChatContext([goal], [task(1, '2026-11-20')], '2026-11-18', [
+			{ task_id: 't1', kind: 'trainer', title: 'Решу ОГЭ', url: 'https://oge.sdamgia.ru/', source: null },
+			{ task_id: 't1', kind: 'article', title: 'Конспект', url: null, source: 'школьный учебник алгебры' }
+		]);
+		expect(text).toContain('Материал: Решу ОГЭ. Ссылка: https://oge.sdamgia.ru/');
+		expect(text).toContain('Материал: Конспект. Где искать: школьный учебник алгебры');
+		expect(text).toContain('только из строк Ссылка');
+	});
 });

@@ -15,8 +15,8 @@ async function mine(locals: App.Locals, platform: App.Platform | undefined) {
 export const load: PageServerLoad = async ({ locals, platform }) => {
 	const me = await mine(locals, platform);
 	const today = todayIso();
-	const [goals, tasks] = await Promise.all([me.listGoals(), me.listGoalTasks()]);
-	return { today, home: buildHome(goals, tasks, today) };
+	const [goals, tasks, materials] = await Promise.all([me.listGoals(), me.listGoalTasks(), me.listMaterials()]);
+	return { today, home: buildHome(goals, tasks, today, materials) };
 };
 
 export const actions: Actions = {

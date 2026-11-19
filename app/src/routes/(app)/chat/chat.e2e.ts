@@ -15,6 +15,18 @@ test('the owner writes a message and keeps the text when the AI is not connected
 	expect(overflow).toBeLessThanOrEqual(0);
 });
 
+test('Enter sends the message and Shift+Enter makes a new line', async ({ page, context }) => {
+	await signInAs(context, E2E.owner);
+	await page.goto('/chat');
+	const box = page.getByLabel('Сообщение');
+	await box.fill('Первая строка');
+	await box.press('Shift+Enter');
+	await box.type('Вторая строка');
+	await expect(box).toHaveValue('Первая строка\nВторая строка');
+	await box.press('Enter');
+	await expect(page.getByRole('alert')).toContainText('нет ключа');
+});
+
 test('a member sees that the AI is closed for now', async ({ page, context }) => {
 	await signInAs(context, E2E.goals);
 	await page.goto('/chat');

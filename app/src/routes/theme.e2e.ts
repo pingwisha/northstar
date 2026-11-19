@@ -8,13 +8,13 @@ test('the theme can be switched and is remembered', async ({ page, context }) =>
 	await page.goto('/');
 	const html = page.locator('html');
 	await page.getByTestId('theme-toggle').click();
-	await expect(page.getByTestId('theme-toggle')).toContainText('светлая');
+	await expect(page.getByTestId('theme-toggle')).toHaveAttribute('aria-label', 'Тема: светлая');
 	await expect(html).not.toHaveClass(/dark/);
 	await page.getByTestId('theme-toggle').click();
 	await expect(html).toHaveClass(/dark/);
 	await page.reload();
 	await expect(html).toHaveClass(/dark/);
-	await expect(page.getByTestId('theme-toggle')).toContainText('тёмная');
+	await expect(page.getByTestId('theme-toggle')).toHaveAttribute('aria-label', 'Тема: тёмная');
 });
 
 test('every page fits a phone screen in both themes', async ({ page, context }) => {

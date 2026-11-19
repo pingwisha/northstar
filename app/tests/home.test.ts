@@ -75,4 +75,18 @@ describe('home page', () => {
 		await seed('a', [today()]);
 		expect((await loadFor('b')).home.today).toEqual([]);
 	});
+
+	it('shows the materials of a task, with a link or a hint where to look', async () => {
+		const { taskIds } = await seed('a', [today()]);
+		await db.batch([
+			db.prepare("INSERT INTO materials (id, user_id, task_id, kind, title, url) VALUES ('m1', 'a', ?, 'trainer', 'Тренажёр', 'https://example.com/')").bind(taskIds[0]),
+			db.prepare("INSERT INTO materials (id, user_id, task_id, kind, title, source) VALUES ('m2', 'a', ?, 'article', 'Конспект', 'учебник')").bind(taskIds[0])
+		]);
+		const task = (await loadFor('a')).home.today[0];
+		expect(task.materials).toEqual([
+			{ kind: 'trainer', title: 'Тренажёр', url: 'https://example.com/', hint: null },
+			{ kind: 'article', title: 'Конспект', url: null, hint: 'учебник' }
+		]);
+		expect((await loadFor('b')).home.today).toEqual([]);
+	});
 });

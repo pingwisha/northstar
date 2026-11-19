@@ -11,12 +11,21 @@ export interface HomeTaskData {
 	completed_at: string | null;
 }
 
+export interface MaterialData {
+	task_id: string;
+	kind: 'article' | 'video' | 'trainer' | 'checklist' | 'other';
+	title: string;
+	url: string | null;
+	source: string | null;
+}
+
 export interface HomeTask {
 	id: string;
 	title: string;
 	goalTitle: string;
 	plannedFor: string;
 	done: boolean;
+	materials: { kind: MaterialData['kind']; title: string; url: string | null; hint: string | null }[];
 }
 
 export interface Home {
@@ -31,11 +40,13 @@ export interface Home {
 
 const toInput = (t: HomeTaskData): TaskInput => ({ plannedFor: t.planned_for, weight: t.weight, completedAt: t.completed_at });
 
-export function buildHome(goals: GoalData[], tasks: HomeTaskData[], today: string): Home {
+export function buildHome(goals: GoalData[], tasks: HomeTaskData[], today: string, materials: MaterialData[] = []): Home {
 	const active = goals.filter((g) => g.status === 'active');
 	const titles = new Map(active.map((g) => [g.id, g.title]));
 	const mine = tasks.filter((t) => titles.has(t.goal_id));
-	const view = (t: HomeTaskData): HomeTask => ({ id: t.id, title: t.title, goalTitle: titles.get(t.goal_id)!, plannedFor: t.planned_for, done: t.completed_at !== null });
+	const view = (t: HomeTaskData): HomeTask => ({ id: t.id, title: t.title, goalTitle: titles.get(t.goal_id)!, plannedFor: t.planned_for, done: t.completed_at !== null,
+		materials: materials.filter((m) => m.task_id === t.id).map((m) => ({ kind: m.kind, title: m.title, url: m.url, hint: m.source }))
+	});
 
 	const nearest = [...active].sort((a, b) => a.deadline.localeCompare(b.deadline))[0];
 	return {

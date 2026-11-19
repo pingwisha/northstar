@@ -6,11 +6,12 @@
 	let { data, form } = $props();
 	const home = $derived(data.home);
 	const OVERDUE_SHOWN = 5;
+	const KIND: Record<string, string> = { article: 'Статья', video: 'Видео', trainer: 'Тренажёр', checklist: 'Чек-лист', other: 'Материал' };
 	const paceClass = { on_track: 'text-foreground', ahead: 'text-foreground', behind: 'text-destructive' } as const;
 </script>
 
 {#snippet row(task: (typeof home.today)[number])}
-	<li class="flex items-center gap-3 rounded-lg border bg-card p-3" data-testid="task">
+	<li class="flex items-center gap-3 rounded-xl border bg-card shadow-sm p-3" data-testid="task">
 		<form method="POST" action="?/check" use:enhance class="contents">
 			<input type="hidden" name="id" value={task.id} />
 			<input type="hidden" name="done" value={task.done ? '0' : '1'} />
@@ -27,6 +28,20 @@
 		<div class="flex min-w-0 flex-col">
 			<span class={task.done ? 'text-muted-foreground line-through' : ''}>{task.title}</span>
 			<span class="text-xs text-muted-foreground">{task.goalTitle}</span>
+			{#if task.materials.length}
+				<ul class="mt-2 flex flex-col gap-1" data-testid="materials">
+					{#each task.materials as m}
+						<li class="text-sm">
+							<span class="text-muted-foreground">{KIND[m.kind]}:</span>
+							{#if m.url}
+								<a href={m.url} target="_blank" rel="noopener noreferrer" class="text-primary underline underline-offset-2">{m.title}</a>
+							{:else}
+								{m.title}{#if m.hint}<span class="text-muted-foreground">. Где искать: {m.hint}</span>{/if}
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			{/if}
 		</div>
 	</li>
 {/snippet}
@@ -37,12 +52,12 @@
 	<h1 class="text-3xl font-semibold">Сегодня</h1>
 
 	{#if home.activeGoals === 0}
-		<div class="flex flex-col gap-3 rounded-lg border bg-card p-6" data-testid="home-empty">
+		<div class="flex flex-col gap-3 rounded-xl border bg-card shadow-sm p-6" data-testid="home-empty">
 			<p>Целей пока нет. Добавь первую, и здесь появятся задачи на каждый день.</p>
 			<a href="/goals" class="inline-flex h-11 items-center self-start rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">Добавить цель</a>
 		</div>
 	{:else}
-		<section class="flex items-center gap-5 rounded-lg border bg-card p-4" aria-label="Общий прогресс">
+		<section class="flex items-center gap-5 rounded-2xl border bg-gradient-to-br from-primary/10 via-card to-card p-5 shadow-sm" aria-label="Общий прогресс">
 			<ProgressRing percent={home.overall} size={128} label="Общий прогресс" />
 			<div class="flex min-w-0 flex-col gap-1">
 				<p class="text-sm text-muted-foreground">Общий прогресс</p>

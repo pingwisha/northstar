@@ -30,7 +30,7 @@
 	</div>
 
 	{#if adding || (form?.action === 'add' && form.message)}
-		<form method="POST" action="?/add" use:enhance={() => async ({ update, result }) => { await update(); if (result.type === 'success') adding = false; }} class="flex flex-col gap-3 rounded-lg border bg-card p-4">
+		<form method="POST" action="?/add" use:enhance={() => async ({ update, result }) => { await update(); if (result.type === 'success') adding = false; }} class="flex flex-col gap-3 rounded-xl border bg-card shadow-sm p-4">
 			<label class="flex flex-col gap-1 text-sm">
 				Что хочешь получить в итоге
 				<input name="title" required maxlength="120" value={form?.values?.title ?? ''} placeholder="Например: сдать ОГЭ на 100 баллов" class="h-11 rounded-md border bg-background px-3" />
@@ -52,7 +52,7 @@
 
 	<ul class="flex flex-col gap-4" data-testid="goal-list">
 		{#each active as card (card.id)}
-			<li class="flex flex-col gap-4 rounded-lg border bg-card p-4" data-testid="goal-card">
+			<li class="flex flex-col gap-4 rounded-xl border bg-card shadow-sm p-4" data-testid="goal-card">
 				<div class="flex items-center gap-4">
 					<ProgressRing percent={card.percent} label={card.title} />
 					<div class="flex min-w-0 flex-col gap-1">
@@ -128,7 +128,7 @@
 				</div>
 			</li>
 		{:else}
-			<li class="rounded-lg border bg-card border-dashed p-6 text-center text-muted-foreground">Пока нет активных целей. Нажми «Добавить цель».</li>
+			<li class="rounded-xl border bg-card shadow-sm border-dashed p-6 text-center text-muted-foreground">Пока нет активных целей. Нажми «Добавить цель».</li>
 		{/each}
 	</ul>
 

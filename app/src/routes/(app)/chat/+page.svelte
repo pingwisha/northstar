@@ -1,9 +1,17 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { splitLinks } from '$lib/ai-text';
 
 	let { data, form } = $props();
 	let sending = $state(false);
 	let text = $state('');
+
+	// Enter sends the message; Shift and Enter make a new line. Not while a word is being composed.
+	function sendOnEnter(e: KeyboardEvent) {
+		if (e.key !== 'Enter' || e.shiftKey || e.isComposing) return;
+		e.preventDefault();
+		if (text.trim() && !sending) (e.currentTarget as HTMLTextAreaElement).form?.requestSubmit();
+	}
 	// After a failed send the person's words come back, so nothing has to be retyped.
 	$effect(() => {
 		if (form && 'text' in form && typeof form.text === 'string') text = form.text;
@@ -23,11 +31,11 @@
 	</div>
 
 	{#if !data.canChat}
-		<p class="rounded-lg border bg-card p-6 text-muted-foreground" data-testid="chat-closed">ИИ пока доступен только владельцу сайта. Для остальных он появится позже.</p>
+		<p class="rounded-xl border bg-card shadow-sm p-6 text-muted-foreground" data-testid="chat-closed">ИИ пока доступен только владельцу сайта. Для остальных он появится позже.</p>
 	{:else}
 		<ul class="flex flex-col gap-3" data-testid="messages">
 			{#each data.messages as m (m.id)}
-				<li class="max-w-[90%] whitespace-pre-wrap rounded-lg p-3 text-sm {m.role === 'user' ? 'self-end bg-primary text-primary-foreground' : 'self-start bg-muted'}" data-role={m.role}>{m.content}</li>
+				<li class="max-w-[90%] whitespace-pre-wrap rounded-lg p-3 text-sm {m.role === 'user' ? 'self-end bg-primary text-primary-foreground' : 'self-start bg-muted'}" data-role={m.role}>{#each splitLinks(m.content) as part}{#if part.href}<a href={part.href} target="_blank" rel="noopener noreferrer" class="break-all underline underline-offset-2">{part.text}</a>{:else}{part.text}{/if}{/each}</li>
 			{:else}
 				<li class="text-sm text-muted-foreground">Спроси что угодно по своим целям. ИИ видит твои цели и прогресс.</li>
 			{/each}
@@ -58,7 +66,16 @@
 		>
 			<label class="flex flex-col gap-1 text-sm">
 				Сообщение
-				<textarea name="text" bind:value={text} rows="3" maxlength="2000" required class="rounded-md border bg-background px-3 py-2"></textarea>
+				<textarea
+					name="text"
+					bind:value={text}
+					rows="3"
+					maxlength="2000"
+					required
+					onkeydown={sendOnEnter}
+					class="rounded-md border bg-background px-3 py-2"
+				></textarea>
+				<span class="text-xs text-muted-foreground">Enter отправляет, Shift и Enter вместе делают новую строку.</span>
 			</label>
 			{#if form && 'message' in form && form.message}
 				<p role="alert" class="text-sm text-destructive">{form.message}</p>

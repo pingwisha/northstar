@@ -101,4 +101,17 @@ describe('chat', () => {
 		expect(await send('o', 'owner', 'а'.repeat(2001))).toMatchObject({ status: 400 });
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
+
+	it('gives the AI the materials and lets only the person\'s own links through', async () => {
+		const goalId = await scoped(db, 'o').addGoal({ title: 'Сдать ОГЭ', description: null, deadline: '2030-05-18' }, '2026-11-18');
+		await db.prepare("INSERT INTO tasks (id, user_id, goal_id, title, planned_for) VALUES ('t1', 'o', ?, 'Решить уравнения', '2026-11-19')").bind(goalId).run();
+		await db.prepare("INSERT INTO materials (id, user_id, task_id, kind, title, url) VALUES ('m1', 'o', 't1', 'trainer', 'Решу ОГЭ', 'https://oge.sdamgia.ru/')").run();
+		const fetchMock = reply('Открой https://oge.sdamgia.ru/ и ещё https://выдуманный.example/page сегодня.');
+		vi.stubGlobal('fetch', fetchMock);
+
+		await send('o', 'owner', 'Какие сайты посмотреть?');
+		expect(sentMessages(fetchMock)[0].content).toContain('Ссылка: https://oge.sdamgia.ru/');
+		const rows = await scoped(db, 'o').chatMessages((await scoped(db, 'o').currentChat())!);
+		expect(rows[1].content).toBe('Открой https://oge.sdamgia.ru/ и ещё ссылка не из плана сегодня.');
+	});
 });

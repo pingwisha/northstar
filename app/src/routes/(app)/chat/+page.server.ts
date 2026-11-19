@@ -1,5 +1,5 @@
 import { error, fail } from '@sveltejs/kit';
-import { plainText, systemMessage } from '$lib/ai-text';
+import { linksIn, plainText, systemMessage } from '$lib/ai-text';
 import { buildChatContext } from '$lib/chat-context';
 import { todayIso } from '$lib/goals';
 import { askAi, type ChatMessage } from '$lib/server/ai';
@@ -41,13 +41,16 @@ export const actions: Actions = {
 		const chatId = (await me.currentChat()) ?? (await me.createChat());
 		const history = (await me.chatMessages(chatId, HISTORY)).map((m): ChatMessage => ({ role: m.role, content: m.content }));
 		const today = todayIso();
-		const [goals, tasks] = await Promise.all([me.listGoals(), me.listGoalTasks()]);
-		const messages: ChatMessage[] = [systemMessage(buildChatContext(goals, tasks, today)), ...history, { role: 'user', content: question }];
+		const [goals, tasks, materials] = await Promise.all([me.listGoals(), me.listGoalTasks(), me.listMaterials()]);
+		const messages: ChatMessage[] = [systemMessage(buildChatContext(goals, tasks, today, materials)), ...history, { role: 'user', content: question }];
 
 		const result = await askAi(env, { userId: locals.userId!, role: locals.role ?? 'member' }, messages, { temperature: 0.5, maxTokens: 700 });
 		if (!result.ok) return fail(result.error === 'not_available' ? 403 : 502, { message: MESSAGES[result.error], text: question });
 
-		const answer = plainText(result.content);
+		// Only addresses from the person's own materials may reach the page: the AI cannot add its own.
+		const known = new Set(materials.map((m) => m.url).filter((u): u is string => u !== null));
+		let answer = plainText(result.content);
+		for (const link of linksIn(answer)) if (!known.has(link)) answer = answer.split(link).join('ссылка не из плана');
 		await me.addExchange(chatId, question, answer || 'Не знаю, что ответить. Спроси иначе.');
 		return { ok: true };
 	},

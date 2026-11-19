@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AI_RULES, plainText, systemMessage } from './ai-text';
+import { AI_RULES, linksIn, plainText, splitLinks, systemMessage } from './ai-text';
 
 describe('plainText', () => {
 	it('removes stars, hashes, backticks, brackets and slashes', () => {
@@ -18,9 +18,25 @@ describe('plainText', () => {
 	});
 });
 
+describe('links in chat text', () => {
+	it('keeps a web address whole while cleaning the text around it', () => {
+		expect(plainText('Смотри **здесь** (тут): https://oge.sdamgia.ru/test?id=1&x=2, потом дальше.')).toBe('Смотри здесь тут: https://oge.sdamgia.ru/test?id=1&x=2, потом дальше.');
+	});
+
+	it('does not take the full stop of a sentence into the address', () => {
+		expect(linksIn('Открой https://example.com/a.')).toEqual(['https://example.com/a']);
+		expect(plainText('Открой https://example.com/a.')).toBe('Открой https://example.com/a.');
+	});
+
+	it('splits a text into pieces and links', () => {
+		expect(splitLinks('до https://a.ru/x после')).toEqual([{ text: 'до ' }, { text: 'https://a.ru/x', href: 'https://a.ru/x' }, { text: ' после' }]);
+		expect(splitLinks('без ссылок')).toEqual([{ text: 'без ссылок' }]);
+	});
+});
+
 describe('the AI rules', () => {
 	it('say the things the product promises', () => {
-		for (const phrase of ['звёздочки', 'не знаю', 'требовательный', 'личные данные', 'Не придумывай задачи']) {
+		for (const phrase of ['звёздочки', 'не знаю', 'требовательный', 'личные данные', 'Не придумывай задачи', 'не отказывай']) {
 			expect(AI_RULES.toLowerCase()).toContain(phrase.toLowerCase());
 		}
 	});

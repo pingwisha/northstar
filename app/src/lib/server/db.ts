@@ -48,6 +48,14 @@ export interface ChatMessageRow {
 	content: string;
 }
 
+export interface MaterialRow {
+	task_id: string;
+	kind: 'article' | 'video' | 'trainer' | 'checklist' | 'other';
+	title: string;
+	url: string | null;
+	source: string | null;
+}
+
 export type SavePlanResult = 'saved' | 'not_found' | 'has_plan';
 
 const normalize = (email: string): string => email.trim().toLowerCase();
@@ -103,6 +111,10 @@ export function scoped(db: D1Database, userId: string) {
 					.bind(userId)
 					.all<GoalTaskRow>()
 			).results;
+		},
+
+		async listMaterials(): Promise<MaterialRow[]> {
+			return (await db.prepare('SELECT task_id, kind, title, url, source FROM materials WHERE user_id = ? ORDER BY rowid').bind(userId).all<MaterialRow>()).results;
 		},
 
 		async countActiveGoals(): Promise<number> {
