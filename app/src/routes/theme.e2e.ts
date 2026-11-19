@@ -21,7 +21,7 @@ test('every page fits a phone screen in both themes', async ({ page, context }) 
 	await signInAs(context, E2E.owner);
 	for (const scheme of ['light', 'dark'] as const) {
 		await page.emulateMedia({ colorScheme: scheme });
-		for (const path of ['/', '/goals', '/chat', '/family']) {
+		for (const path of ['/', '/goals', '/calendar', '/chat', '/family']) {
 			await page.goto(path);
 			await expect(page.locator('main')).toBeVisible();
 			const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
