@@ -7,6 +7,7 @@
 	<nav class="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-sm">
 		<a href="/goals" class="underline-offset-4 hover:underline">Мои цели</a>
 		{#if data.role === 'owner'}
+			<a href="/chat" class="underline-offset-4 hover:underline">Чат с ИИ</a>
 			<a href="/family" class="underline-offset-4 hover:underline">Семья и доступ</a>
 		{/if}
 		<span class="hidden text-muted-foreground sm:inline">{data.email}</span>

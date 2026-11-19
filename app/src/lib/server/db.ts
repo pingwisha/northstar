@@ -42,6 +42,12 @@ export interface GoalTaskRow {
 	completed_at: string | null;
 }
 
+export interface ChatMessageRow {
+	id: string;
+	role: 'user' | 'assistant';
+	content: string;
+}
+
 export type SavePlanResult = 'saved' | 'not_found' | 'has_plan';
 
 const normalize = (email: string): string => email.trim().toLowerCase();
@@ -162,6 +168,40 @@ export function scoped(db: D1Database, userId: string) {
 				.bind(done ? 1 : 0, now.toISOString(), taskId, userId)
 				.run();
 			return r.meta.changes > 0;
+		},
+
+		// The newest conversation, or null when there is none yet.
+		async currentChat(): Promise<string | null> {
+			const row = await db.prepare('SELECT id FROM chats WHERE user_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1').bind(userId).first<{ id: string }>();
+			return row?.id ?? null;
+		},
+
+		async createChat(): Promise<string> {
+			const id = crypto.randomUUID();
+			await db.prepare('INSERT INTO chats (id, user_id) VALUES (?, ?)').bind(id, userId).run();
+			return id;
+		},
+
+		// The last messages of one of the person's conversations, oldest first.
+		async chatMessages(chatId: string, limit = 40): Promise<ChatMessageRow[]> {
+			const rows = (
+				await db
+					.prepare('SELECT id, role, content FROM chat_messages WHERE chat_id = ? AND user_id = ? ORDER BY created_at DESC, rowid DESC LIMIT ?')
+					.bind(chatId, userId, limit)
+					.all<ChatMessageRow>()
+			).results;
+			return rows.reverse();
+		},
+
+		// A question and its answer are stored together, so a failed answer leaves no orphan question.
+		async addExchange(chatId: string, question: string, answer: string): Promise<boolean> {
+			const chat = await db.prepare('SELECT id FROM chats WHERE id = ? AND user_id = ?').bind(chatId, userId).first();
+			if (!chat) return false;
+			await db.batch([
+				db.prepare("INSERT INTO chat_messages (id, user_id, chat_id, role, content, created_at) VALUES (?, ?, ?, 'user', ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))").bind(crypto.randomUUID(), userId, chatId, question),
+				db.prepare("INSERT INTO chat_messages (id, user_id, chat_id, role, content, created_at) VALUES (?, ?, ?, 'assistant', ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))").bind(crypto.randomUUID(), userId, chatId, answer)
+			]);
+			return true;
 		},
 
 		// Moves tasks to new days. The user and goal are part of every write, and only open
