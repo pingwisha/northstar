@@ -15,6 +15,7 @@
 	const tabs = $derived([
 		{ href: '/', label: 'Сегодня', icon: 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10' },
 		{ href: '/calendar', label: 'Календарь', icon: 'M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z' },
+		{ href: '/trials', label: 'Пробники', icon: 'M4 20V10M10 20V4M16 20v-8M22 20H2' },
 		{ href: '/goals', label: 'Мои цели', icon: 'M12 21a9 9 0 100-18 9 9 0 000 18zM12 16a4 4 0 100-8 4 4 0 000 8zM12 12h.01' },
 		...(data.role === 'owner'
 			? [

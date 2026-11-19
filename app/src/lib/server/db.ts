@@ -4,6 +4,7 @@
 // behalf of the owner, whose role the caller has already checked.
 
 import type { ScheduledStage } from '$lib/plan';
+import type { NewTrial, Trial } from '$lib/trials';
 
 export type Role = 'owner' | 'member';
 
@@ -152,6 +153,32 @@ export function scoped(db: D1Database, userId: string) {
 			if (!(await this.taskIsOpen(taskId))) return false;
 			await db.prepare('UPDATE tasks SET note = ? WHERE id = ? AND user_id = ?').bind(note, taskId, userId).run();
 			return true;
+		},
+
+		async listTrials(): Promise<Trial[]> {
+			const rows = (
+				await db
+					.prepare('SELECT id, goal_id, taken_on, title, score, max_score, weak_topics FROM trials WHERE user_id = ? ORDER BY taken_on, rowid')
+					.bind(userId)
+					.all<{ id: string; goal_id: string; taken_on: string; title: string; score: number; max_score: number; weak_topics: string | null }>()
+			).results;
+			return rows.map((r) => ({ id: r.id, goalId: r.goal_id, takenOn: r.taken_on, title: r.title, score: r.score, maxScore: r.max_score, weakTopics: r.weak_topics }));
+		},
+
+		// A result goes only to one of the person's active goals.
+		async addTrial(goalId: string, t: NewTrial): Promise<boolean> {
+			const goal = await db.prepare("SELECT id FROM goals WHERE id = ? AND user_id = ? AND status = 'active'").bind(goalId, userId).first();
+			if (!goal) return false;
+			await db
+				.prepare('INSERT INTO trials (id, user_id, goal_id, taken_on, title, score, max_score, weak_topics) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+				.bind(crypto.randomUUID(), userId, goalId, t.takenOn, t.title, t.score, t.maxScore, t.weakTopics)
+				.run();
+			return true;
+		},
+
+		async deleteTrial(trialId: string): Promise<boolean> {
+			const r = await db.prepare('DELETE FROM trials WHERE id = ? AND user_id = ?').bind(trialId, userId).run();
+			return (r.meta.changes ?? 0) > 0;
 		},
 
 		async countActiveGoals(): Promise<number> {

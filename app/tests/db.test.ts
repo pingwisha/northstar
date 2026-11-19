@@ -28,7 +28,7 @@ describe('foundation schema', () => {
 		const { results } = await db
 			.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE '_cf_%' AND name NOT LIKE 'sqlite_%'")
 			.all<{ name: string }>();
-		expect(results.map((r) => r.name).sort()).toEqual(['ai_usage', 'chat_messages', 'chats', 'goals', 'invites', 'materials', 'stages', 'tasks', 'users']);
+		expect(results.map((r) => r.name).sort()).toEqual(['ai_usage', 'chat_messages', 'chats', 'goals', 'invites', 'materials', 'stages', 'tasks', 'trials', 'users']);
 	});
 
 	it('keeps one user per email, ignoring case', async () => {

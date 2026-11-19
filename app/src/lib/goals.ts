@@ -17,7 +17,7 @@ export type Parsed<T> = { ok: true; value: T } | { ok: false; message: string };
 
 const DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-function isRealDate(raw: string): boolean {
+export function isRealDate(raw: string): boolean {
 	const m = DATE.exec(raw);
 	if (!m) return false;
 	const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));

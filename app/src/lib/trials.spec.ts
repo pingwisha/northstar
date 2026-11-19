@@ -1,0 +1,52 @@
+import { describe, expect, it } from 'vitest';
+import { parseTopics, parseTrial, summarizeTrials, type Trial } from './trials';
+
+const today = '2026-11-20';
+const ok = { title: 'Пробник 1', day: '2026-11-10', score: '21', maxScore: '30', topics: '' };
+
+describe('parseTrial', () => {
+	it('accepts a result, with a comma as the decimal sign', () => {
+		expect(parseTrial({ ...ok, score: '7,5', maxScore: '10' }, today)).toEqual({ ok: true, value: { takenOn: '2026-11-10', title: 'Пробник 1', score: 7.5, maxScore: 10, weakTopics: null } });
+	});
+	it('rejects a day in the future, bad numbers and a score above the maximum', () => {
+		expect(parseTrial({ ...ok, day: '2026-11-21' }, today).ok).toBe(false);
+		expect(parseTrial({ ...ok, score: 'много' }, today).ok).toBe(false);
+		expect(parseTrial({ ...ok, score: '-1' }, today).ok).toBe(false);
+		expect(parseTrial({ ...ok, score: '31' }, today).ok).toBe(false);
+		expect(parseTrial({ ...ok, maxScore: '0' }, today).ok).toBe(false);
+		expect(parseTrial({ ...ok, title: '  ' }, today).ok).toBe(false);
+		expect(parseTrial({ ...ok, day: '' }, today).ok).toBe(false);
+	});
+});
+
+describe('parseTopics', () => {
+	it('splits, trims and drops repeats', () => {
+		expect(parseTopics('Дроби,  дроби ; Графики\nГеометрия')).toEqual({ ok: true, value: 'Дроби, Графики, Геометрия' });
+		expect(parseTopics('  ')).toEqual({ ok: true, value: null });
+	});
+	it('limits the count', () => {
+		expect(parseTopics(Array.from({ length: 11 }, (_, i) => `т${i}`).join(',')).ok).toBe(false);
+	});
+});
+
+const t = (id: string, takenOn: string, score: number, weakTopics: string | null): Trial => ({ id, goalId: 'g', takenOn, title: id, score, maxScore: 30, weakTopics });
+
+describe('summarizeTrials', () => {
+	it('is empty with no results', () => {
+		expect(summarizeTrials([])).toMatchObject({ points: [], last: null, best: null, change: null, weak: [] });
+	});
+	it('orders by day, floors percents and shows growth', () => {
+		const s = summarizeTrials([t('b', '2026-11-10', 20, null), t('a', '2026-11-01', 15, null)]);
+		expect(s.points.map((p) => p.percent)).toEqual([50, 66]);
+		expect(s).toMatchObject({ last: 66, best: 66, change: 16 });
+	});
+	it('keeps the order of entry for results on the same day', () => {
+		const s = summarizeTrials([t('z', '2026-11-01', 15, null), t('a', '2026-11-01', 21, null)]);
+		expect(s.points.map((p) => p.percent)).toEqual([50, 70]);
+		expect(s.change).toBe(20);
+	});
+	it('counts weak topics, most frequent first', () => {
+		const s = summarizeTrials([t('a', '2026-11-01', 15, 'Дроби, Графики'), t('b', '2026-11-05', 18, 'дроби'), t('c', '2026-11-09', 20, 'Геометрия, Дроби')]);
+		expect(s.weak).toEqual([{ topic: 'Дроби', count: 3 }, { topic: 'Геометрия', count: 1 }, { topic: 'Графики', count: 1 }]);
+	});
+});
