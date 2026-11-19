@@ -170,6 +170,35 @@ export function scoped(db: D1Database, userId: string) {
 			return 'saved';
 		},
 
+		// Adds tasks written by hand to one of the person's active goals. They belong to no stage.
+		async addTasks(goalId: string, titles: string[], plannedFor: string): Promise<boolean> {
+			const goal = await db.prepare("SELECT id FROM goals WHERE id = ? AND user_id = ? AND status = 'active'").bind(goalId, userId).first();
+			if (!goal) return false;
+			await db.batch(
+				titles.map((title) =>
+					db.prepare('INSERT INTO tasks (id, user_id, goal_id, title, planned_for) VALUES (?, ?, ?, ?, ?)').bind(crypto.randomUUID(), userId, goalId, title, plannedFor)
+				)
+			);
+			return true;
+		},
+
+		// Renames a task and sets its day. Only tasks of the person's active goals change.
+		async updateTask(taskId: string, title: string, plannedFor: string): Promise<boolean> {
+			const r = await db
+				.prepare("UPDATE tasks SET title = ?1, planned_for = ?2 WHERE id = ?3 AND user_id = ?4 AND goal_id IN (SELECT id FROM goals WHERE user_id = ?4 AND status = 'active')")
+				.bind(title, plannedFor, taskId, userId)
+				.run();
+			return r.meta.changes > 0;
+		},
+
+		async deleteTask(taskId: string): Promise<boolean> {
+			const r = await db
+				.prepare("DELETE FROM tasks WHERE id = ? AND user_id = ? AND goal_id IN (SELECT id FROM goals WHERE user_id = ? AND status = 'active')")
+				.bind(taskId, userId, userId)
+				.run();
+			return r.meta.changes > 0;
+		},
+
 		// Checks or unchecks one task. Only tasks of the person's active goals can change;
 		// the first check time is kept when a done task is checked again.
 		async setTaskCompleted(taskId: string, done: boolean, now: Date = new Date()): Promise<boolean> {

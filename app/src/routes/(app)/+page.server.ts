@@ -1,8 +1,9 @@
-import { error, fail } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import { todayIso } from '$lib/goals';
 import { buildHome } from '$lib/home-view';
 import { scoped } from '$lib/server/db';
 import { appEnv } from '$lib/server/env';
+import { taskActions } from '$lib/server/task-actions';
 import type { Actions, PageServerLoad } from './$types';
 
 // The person comes only from the verified session set by hooks.server.ts.
@@ -19,13 +20,4 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 	return { today, home: buildHome(goals, tasks, today, materials) };
 };
 
-export const actions: Actions = {
-	check: async ({ request, locals, platform }) => {
-		const me = await mine(locals, platform);
-		const data = await request.formData();
-		const taskId = String(data.get('id') ?? '');
-		const done = data.get('done') === '1';
-		if (!(await me.setTaskCompleted(taskId, done))) return fail(404, { taskId, message: 'Такой задачи нет.' });
-		return { ok: true };
-	}
-};
+export const actions: Actions = taskActions;

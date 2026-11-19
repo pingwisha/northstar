@@ -1,4 +1,5 @@
 <script lang="ts">
+	import AddTask from '$lib/components/AddTask.svelte';
 	import TaskRow from '$lib/components/TaskRow.svelte';
 	import { dayTitle, monthGrid, monthTitle, shiftMonth } from '$lib/calendar';
 
@@ -69,12 +70,13 @@
 			{#each data.dayDeadlines as title}
 				<p class="rounded-lg bg-primary/10 px-3 py-2 text-sm">Срок цели: {title}</p>
 			{/each}
-			{#if form && 'message' in form && form.message}
+			{#if form && 'message' in form && form.message && form.action !== 'addTask'}
 				<p role="alert" class="text-sm text-destructive">{form.message}</p>
 			{/if}
+			<AddTask goals={data.goals} today={data.today} day={data.day >= data.today ? data.day : data.today} {form} />
 			{#if data.dayTasks.length}
 				<ul class="flex flex-col gap-2" data-testid="day-tasks">
-					{#each data.dayTasks as task (task.id)}<TaskRow {task} />{/each}
+					{#each data.dayTasks as task (task.id)}<TaskRow {task} today={data.today} />{/each}
 				</ul>
 			{:else}
 				<p class="text-sm text-muted-foreground" data-testid="day-empty">{data.taskTotal ? 'На этот день задач нет.' : 'Задач пока нет: у целей ещё нет плана.'}</p>

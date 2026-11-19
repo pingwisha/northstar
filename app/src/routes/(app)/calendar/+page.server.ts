@@ -1,10 +1,11 @@
-import { error, fail } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import { parseMonth } from '$lib/calendar';
 import { summarizeDays } from '$lib/calendar';
 import { todayIso } from '$lib/goals';
 import { buildHome } from '$lib/home-view';
 import { scoped } from '$lib/server/db';
 import { appEnv } from '$lib/server/env';
+import { taskActions } from '$lib/server/task-actions';
 import type { Actions, PageServerLoad } from './$types';
 
 async function mine(locals: App.Locals, platform: App.Platform | undefined) {
@@ -38,16 +39,9 @@ export const load: PageServerLoad = async ({ locals, platform, url }) => {
 		days: Object.fromEntries(info),
 		dayTasks: forDay,
 		dayDeadlines: day ? (info.get(day)?.deadlines ?? []) : [],
-		taskTotal: mineTasks.length
+		taskTotal: mineTasks.length,
+		goals: active.map((g) => ({ id: g.id, title: g.title, deadline: g.deadline }))
 	};
 };
 
-export const actions: Actions = {
-	check: async ({ request, locals, platform }) => {
-		const me = await mine(locals, platform);
-		const data = await request.formData();
-		const taskId = String(data.get('id') ?? '');
-		if (!(await me.setTaskCompleted(taskId, data.get('done') === '1'))) return fail(404, { taskId, message: 'Такой задачи нет.' });
-		return { ok: true };
-	}
-};
+export const actions: Actions = taskActions;

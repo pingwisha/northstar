@@ -18,7 +18,7 @@ afterEach(async () => {
 });
 
 const platform = () => ({ env: { DB: db } }) as unknown as App.Platform;
-const open = (userId: string, query = '') => load({ locals: { userId }, platform: platform(), url: new URL(`http://localhost/calendar${query}`) } as never) as Promise<Awaited<ReturnType<typeof load>> & { days: Record<string, { total: number; deadlines: string[] }>; dayTasks: { id: string }[] }>;
+const open = (userId: string, query = '') => load({ locals: { userId }, platform: platform(), url: new URL(`http://localhost/calendar${query}`) } as never) as Promise<{ month: string; days: Record<string, { total: number; deadlines: string[] }>; dayTasks: { id: string }[] }>;
 
 async function seed(userId: string, date: string) {
 	const goalId = await scoped(db, userId).addGoal({ title: 'Цель', description: null, deadline: '2030-01-01' }, '2026-11-01');
@@ -60,6 +60,6 @@ describe('calendar', () => {
 		body.set('done', '1');
 		const as = (userId: string) => actions.check!({ request: new Request('http://localhost/calendar', { method: 'POST', body }), locals: { userId }, platform: platform() } as never);
 		expect(await as('b')).toMatchObject({ status: 404 });
-		expect(await as('a')).toEqual({ ok: true });
+		expect(await as('a')).toMatchObject({ ok: true });
 	});
 });

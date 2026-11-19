@@ -36,6 +36,8 @@ export interface Home {
 	overdue: HomeTask[];
 	nearest: { goalTitle: string; deadline: string; daysLabel: string } | null;
 	activeGoals: number;
+	// The goals a task can be added to.
+	goals: { id: string; title: string; deadline: string }[];
 }
 
 const toInput = (t: HomeTaskData): TaskInput => ({ plannedFor: t.planned_for, weight: t.weight, completedAt: t.completed_at });
@@ -55,6 +57,7 @@ export function buildHome(goals: GoalData[], tasks: HomeTaskData[], today: strin
 		today: mine.filter((t) => t.planned_for === today).map(view),
 		overdue: mine.filter((t) => t.planned_for < today && t.completed_at === null).map(view),
 		nearest: nearest ? { goalTitle: nearest.title, deadline: nearest.deadline, daysLabel: daysLabel(daysUntil(today, nearest.deadline)) } : null,
-		activeGoals: active.length
+		activeGoals: active.length,
+		goals: active.map((g) => ({ id: g.id, title: g.title, deadline: g.deadline }))
 	};
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import AddTask from '$lib/components/AddTask.svelte';
 	import TaskRow from '$lib/components/TaskRow.svelte';
 	import ProgressRing from '$lib/components/ProgressRing.svelte';
 	import { formatDate } from '$lib/goals';
@@ -39,15 +40,17 @@
 			</div>
 		</section>
 
-		{#if form && 'message' in form && form.message}
+		{#if form && 'message' in form && form.message && form.action !== 'addTask'}
 			<p role="alert" class="text-sm text-destructive">{form.message}</p>
 		{/if}
+
+		<AddTask goals={home.goals} today={data.today} {form} />
 
 		<section class="flex flex-col gap-3" aria-labelledby="today-title">
 			<h2 id="today-title" class="text-xl font-semibold">Задачи на сегодня</h2>
 			{#if home.today.length}
 				<ul class="flex flex-col gap-2" data-testid="today-list">
-					{#each home.today as task (task.id)}<TaskRow {task} />{/each}
+					{#each home.today as task (task.id)}<TaskRow {task} today={data.today} />{/each}
 				</ul>
 			{:else}
 				<p class="text-sm text-muted-foreground" data-testid="today-empty">На сегодня задач нет.</p>
@@ -58,7 +61,7 @@
 			<section class="flex flex-col gap-3" aria-labelledby="overdue-title">
 				<h2 id="overdue-title" class="text-xl font-semibold text-destructive">Не сделано раньше</h2>
 				<ul class="flex flex-col gap-2" data-testid="overdue-list">
-					{#each home.overdue.slice(0, OVERDUE_SHOWN) as task (task.id)}<TaskRow {task} />{/each}
+					{#each home.overdue.slice(0, OVERDUE_SHOWN) as task (task.id)}<TaskRow {task} today={data.today} />{/each}
 				</ul>
 				<a href="/goals" class="text-sm underline">Отстаёшь? Пересчитай план на странице целей.</a>
 				{#if home.overdue.length > OVERDUE_SHOWN}
