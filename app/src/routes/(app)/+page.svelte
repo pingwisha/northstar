@@ -10,7 +10,7 @@
 </script>
 
 {#snippet row(task: (typeof home.today)[number])}
-	<li class="flex items-center gap-3 rounded-lg border p-3" data-testid="task">
+	<li class="flex items-center gap-3 rounded-lg border bg-card p-3" data-testid="task">
 		<form method="POST" action="?/check" use:enhance class="contents">
 			<input type="hidden" name="id" value={task.id} />
 			<input type="hidden" name="done" value={task.done ? '0' : '1'} />
@@ -37,12 +37,12 @@
 	<h1 class="text-3xl font-semibold">Сегодня</h1>
 
 	{#if home.activeGoals === 0}
-		<div class="flex flex-col gap-3 rounded-lg border p-6" data-testid="home-empty">
+		<div class="flex flex-col gap-3 rounded-lg border bg-card p-6" data-testid="home-empty">
 			<p>Целей пока нет. Добавь первую, и здесь появятся задачи на каждый день.</p>
 			<a href="/goals" class="inline-flex h-11 items-center self-start rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">Добавить цель</a>
 		</div>
 	{:else}
-		<section class="flex items-center gap-5 rounded-lg border p-4" aria-label="Общий прогресс">
+		<section class="flex items-center gap-5 rounded-lg border bg-card p-4" aria-label="Общий прогресс">
 			<ProgressRing percent={home.overall} size={128} label="Общий прогресс" />
 			<div class="flex min-w-0 flex-col gap-1">
 				<p class="text-sm text-muted-foreground">Общий прогресс</p>

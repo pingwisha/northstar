@@ -23,7 +23,7 @@
 	</div>
 
 	{#if !data.canChat}
-		<p class="rounded-lg border p-6 text-muted-foreground" data-testid="chat-closed">ИИ пока доступен только владельцу сайта. Для остальных он появится позже.</p>
+		<p class="rounded-lg border bg-card p-6 text-muted-foreground" data-testid="chat-closed">ИИ пока доступен только владельцу сайта. Для остальных он появится позже.</p>
 	{:else}
 		<ul class="flex flex-col gap-3" data-testid="messages">
 			{#each data.messages as m (m.id)}

@@ -5,25 +5,32 @@
 
 @custom-variant dark (&:is(.dark *));
 
+html {
+	color-scheme: light;
+}
+html.dark {
+	color-scheme: dark;
+}
+
 :root {
-	--background: oklch(1 0 0);
-	--foreground: oklch(0.145 0 0);
-	--card: oklch(1 0 0);
-	--card-foreground: oklch(0.145 0 0);
-	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.145 0 0);
-	--primary: oklch(0.205 0 0);
-	--primary-foreground: oklch(0.985 0 0);
-	--secondary: oklch(0.97 0 0);
-	--secondary-foreground: oklch(0.205 0 0);
-	--muted: oklch(0.97 0 0);
-	--muted-foreground: oklch(0.556 0 0);
-	--accent: oklch(0.97 0 0);
-	--accent-foreground: oklch(0.205 0 0);
-	--destructive: oklch(0.577 0.245 27.325);
-	--border: oklch(0.922 0 0);
-	--input: oklch(0.922 0 0);
-	--ring: oklch(0.708 0 0);
+	--background: oklch(0.985 0.006 250);
+	--foreground: oklch(0.23 0.03 258);
+	--card: oklch(1 0.003 250);
+	--card-foreground: oklch(0.23 0.03 258);
+	--popover: oklch(1 0.003 250);
+	--popover-foreground: oklch(0.23 0.03 258);
+	--primary: oklch(0.5 0.14 255);
+	--primary-foreground: oklch(0.99 0.005 250);
+	--secondary: oklch(0.94 0.012 250);
+	--secondary-foreground: oklch(0.3 0.04 258);
+	--muted: oklch(0.935 0.012 250);
+	--muted-foreground: oklch(0.48 0.035 258);
+	--accent: oklch(0.94 0.02 250);
+	--accent-foreground: oklch(0.3 0.04 258);
+	--destructive: oklch(0.53 0.2 27);
+	--border: oklch(0.89 0.015 250);
+	--input: oklch(0.89 0.015 250);
+	--ring: oklch(0.6 0.12 255);
 	--chart-1: oklch(0.87 0 0);
 	--chart-2: oklch(0.556 0 0);
 	--chart-3: oklch(0.439 0 0);
@@ -41,24 +48,24 @@
 }
 
 .dark {
-	--background: oklch(0.145 0 0);
-	--foreground: oklch(0.985 0 0);
-	--card: oklch(0.205 0 0);
-	--card-foreground: oklch(0.985 0 0);
-	--popover: oklch(0.205 0 0);
-	--popover-foreground: oklch(0.985 0 0);
-	--primary: oklch(0.922 0 0);
-	--primary-foreground: oklch(0.205 0 0);
-	--secondary: oklch(0.269 0 0);
-	--secondary-foreground: oklch(0.985 0 0);
-	--muted: oklch(0.269 0 0);
-	--muted-foreground: oklch(0.708 0 0);
-	--accent: oklch(0.269 0 0);
-	--accent-foreground: oklch(0.985 0 0);
-	--destructive: oklch(0.704 0.191 22.216);
-	--border: oklch(1 0 0 / 10%);
-	--input: oklch(1 0 0 / 15%);
-	--ring: oklch(0.556 0 0);
+	--background: oklch(0.19 0.02 258);
+	--foreground: oklch(0.95 0.01 250);
+	--card: oklch(0.235 0.022 258);
+	--card-foreground: oklch(0.95 0.01 250);
+	--popover: oklch(0.235 0.022 258);
+	--popover-foreground: oklch(0.95 0.01 250);
+	--primary: oklch(0.76 0.11 250);
+	--primary-foreground: oklch(0.19 0.03 258);
+	--secondary: oklch(0.29 0.025 258);
+	--secondary-foreground: oklch(0.95 0.01 250);
+	--muted: oklch(0.3 0.025 258);
+	--muted-foreground: oklch(0.74 0.025 255);
+	--accent: oklch(0.3 0.03 258);
+	--accent-foreground: oklch(0.95 0.01 250);
+	--destructive: oklch(0.72 0.17 22);
+	--border: oklch(1 0 0 / 12%);
+	--input: oklch(1 0 0 / 16%);
+	--ring: oklch(0.65 0.1 255);
 	--chart-1: oklch(0.87 0 0);
 	--chart-2: oklch(0.556 0 0);
 	--chart-3: oklch(0.439 0 0);
@@ -121,7 +128,13 @@
 		@apply border-border outline-ring/50;
 	}
 	body {
-		@apply bg-background text-foreground;
+		@apply bg-background text-foreground antialiased;
+	}
+	/* 16px keeps phones from zooming the page when a field is tapped. */
+	input,
+	textarea,
+	select {
+		font-size: 16px;
 	}
 	html {
 		@apply font-sans;
