@@ -96,13 +96,13 @@ Progress: готово 2026-11-19. Спокойная сине-серая пал
 
 ## Выпуск
 
-### 3.1 Публикация сайта — [~]
+### 3.1 Публикация сайта — [x]
 Владелец: human, затем agent
 Do: Мэри подтверждает вход в Cloudflare по инструкции, агент публикует сайт.
 Done-when: сайт открывается по адресу, вход работает.
-Progress: 2026-11-19 сайт опубликован: https://northstar-5gb.pages.dev (имя northstar было занято). Создана база D1 northstar (id в `app/wrangler.jsonc`, не секрет), миграции применены, проект Pages northstar, пять секретов (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, ALLOWED_EMAILS, GEMINI_API_KEY, SESSION_SECRET) лежат в Cloudflare; SESSION_SECRET создан новый, отличается от локального. Проверено снаружи: страница входа 200, закрытые страницы без входа не отдают данные, кнопка ведёт в Google с адресом возврата https://northstar-5gb.pages.dev/auth/google/callback. Осталось для Мэри: добавить этот адрес возврата в Google Cloud и войти. Публикация вручную: в папке app `npm run build`, затем `npx wrangler pages deploy .svelte-kit/cloudflare --project-name northstar --branch main` (ключи берутся из `.env`).
+Progress: 2026-11-19 сайт опубликован: https://northstar-5gb.pages.dev (имя northstar было занято). Создана база D1 northstar (id в `app/wrangler.jsonc`, не секрет), миграции применены, проект Pages northstar, пять секретов (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, ALLOWED_EMAILS, GEMINI_API_KEY, SESSION_SECRET) лежат в Cloudflare; SESSION_SECRET создан новый, отличается от локального. Проверено снаружи: страница входа 200, закрытые страницы без входа не отдают данные, кнопка ведёт в Google с адресом возврата https://northstar-5gb.pages.dev/auth/google/callback. Мэри добавила адрес возврата в Google Cloud и вошла 2026-11-19: вход через Google работает. Публикация вручную: в папке app `npm run build`, затем `npx wrangler pages deploy .svelte-kit/cloudflare --project-name northstar --branch main` (ключи берутся из `.env`).
 
-### 3.2 Проверка Мэри — [ ]
+### 3.2 Проверка Мэри — [~]
 Владелец: human
 Do: Мэри создаёт настоящую цель и неделю пользуется сайтом, пишет, что неудобно.
 Done-when: Мэри подтверждает, что этап 1 готов.
