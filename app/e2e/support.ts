@@ -14,7 +14,8 @@ export const E2E = {
 	calendar: { id: 'e2e-calendar', email: 'e2e-calendar@example.com' },
 	tasks: { id: 'e2e-tasks', email: 'e2e-tasks@example.com' },
 	materials: { id: 'e2e-materials', email: 'e2e-materials@example.com' },
-	trials: { id: 'e2e-trials', email: 'e2e-trials@example.com' }
+	trials: { id: 'e2e-trials', email: 'e2e-trials@example.com' },
+	report: { id: 'e2e-report', email: 'e2e-report@example.com' }
 } as const;
 
 type Person = { id: string; email: string };
