@@ -6,6 +6,7 @@ export const MAX_TRIAL_TITLE = 120;
 export const MAX_TOPICS = 10;
 export const MAX_TOPIC = 60;
 export const MAX_SCORE = 100000;
+export const MAX_TRIALS_TOTAL = 500;
 
 export interface Trial {
 	id: string;

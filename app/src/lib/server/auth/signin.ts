@@ -15,6 +15,8 @@ export interface AuthEnv {
 	GEMINI_API_KEY?: string;
 	AI_MODEL?: string;
 	DAILY_LIMIT?: string;
+	// Set to "open" to let any verified Google account in as a member. Anything else keeps the site invite-only.
+	SIGNUP?: string;
 }
 
 export type SignInFailure = 'state' | 'exchange' | 'id_token' | 'unverified' | 'not_allowed';
@@ -33,10 +35,12 @@ export interface SignInInput {
 	now?: Date;
 }
 
-// The owner is whoever is on the ALLOWED_EMAILS secret; invited people are members.
+// The owner is whoever is on the ALLOWED_EMAILS secret; invited people are members, and so is everyone
+// when SIGNUP is open.
 // Null means this email may not sign in.
 export async function roleFor(env: AuthEnv, email: string): Promise<Role | null> {
 	if (isAllowed(parseAllowlist(env.ALLOWED_EMAILS), email)) return 'owner';
+	if (env.SIGNUP === 'open') return 'member';
 	return (await isInvited(env.DB, email)) ? 'member' : null;
 }
 

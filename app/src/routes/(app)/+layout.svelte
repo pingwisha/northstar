@@ -85,4 +85,8 @@
 
 <div class="pb-24 sm:pb-8">
 	{@render children()}
+	<footer class="mx-auto flex max-w-3xl gap-4 px-4 pb-4 text-xs text-muted-foreground">
+		<a href="/account" class="underline underline-offset-2">Мои данные</a>
+		<a href="/privacy" class="underline underline-offset-2">Конфиденциальность</a>
+	</footer>
 </div>

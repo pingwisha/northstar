@@ -3,7 +3,7 @@
 import { error, fail, type RequestEvent } from '@sveltejs/kit';
 import { todayIso } from '$lib/goals';
 import { MAX_OWN_MATERIALS, parseMaterialLink, parseNote } from '$lib/materials';
-import { parseOneTitle, parseTaskDay, parseTaskTitles } from '$lib/tasks';
+import { MAX_TASKS_TOTAL, parseOneTitle, parseTaskDay, parseTaskTitles } from '$lib/tasks';
 import { scoped } from './db';
 import { appEnv } from './env';
 
@@ -32,6 +32,7 @@ export const taskActions = {
 		if (!goal) return fail(404, { action: 'addTask', message: 'Выбери цель из списка.', values });
 		const titles = parseTaskTitles(values.titles);
 		if (!titles.ok) return fail(400, { action: 'addTask', message: titles.message, values });
+		if ((await me.countTasks()) + titles.value.length > MAX_TASKS_TOTAL) return fail(400, { action: 'addTask', message: `Всего можно хранить не больше ${MAX_TASKS_TOTAL} задач. Удали ненужные.`, values });
 		const day = parseTaskDay(values.day, todayIso(undefined, event.locals.timezone), goal.deadline);
 		if (!day.ok) return fail(400, { action: 'addTask', message: day.message, values });
 		if (!(await me.addTasks(goal.id, titles.value, day.value))) return fail(404, { action: 'addTask', message: 'Выбери цель из списка.', values });

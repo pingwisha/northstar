@@ -2,7 +2,7 @@ import { error, fail } from '@sveltejs/kit';
 import { todayIso } from '$lib/goals';
 import { scoped } from '$lib/server/db';
 import { appEnv } from '$lib/server/env';
-import { parseTrial, summarizeTrials, scoreText } from '$lib/trials';
+import { MAX_TRIALS_TOTAL, parseTrial, summarizeTrials, scoreText } from '$lib/trials';
 import type { Actions, PageServerLoad } from './$types';
 
 async function mine(locals: App.Locals, platform: App.Platform | undefined) {
@@ -42,6 +42,7 @@ export const actions: Actions = {
 		const values = { goalId: field(data, 'goalId'), title: field(data, 'title'), day: field(data, 'day'), score: field(data, 'score'), maxScore: field(data, 'maxScore'), topics: field(data, 'topics') };
 		const parsed = parseTrial(values, todayIso(undefined, locals.timezone));
 		if (!parsed.ok) return fail(400, { action: 'add', message: parsed.message, values });
+		if ((await me.countTrials()) >= MAX_TRIALS_TOTAL) return fail(400, { action: 'add', message: `Можно хранить не больше ${MAX_TRIALS_TOTAL} результатов. Удали старые.`, values });
 		if (!(await me.addTrial(values.goalId, parsed.value))) return fail(404, { action: 'add', message: 'Выбери цель из списка.', values });
 		return { action: 'add', ok: true };
 	},

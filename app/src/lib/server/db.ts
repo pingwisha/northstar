@@ -100,6 +100,36 @@ export function scoped(db: D1Database, userId: string) {
 
 		getUser: () => db.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first<User>(),
 
+		// Everything the person has stored, for the download on the account page. The AI usage counter is not content.
+		async exportAll() {
+			const all = async (sql: string) => (await db.prepare(sql).bind(userId).all()).results;
+			const user = await this.getUser();
+			return {
+				exportedAt: new Date().toISOString(),
+				email: user?.email ?? null,
+				goals: await all('SELECT id, title, description, start_date, deadline, status, created_at FROM goals WHERE user_id = ? ORDER BY created_at, rowid'),
+				stages: await all('SELECT id, goal_id, position, title, due_date FROM stages WHERE user_id = ? ORDER BY goal_id, position'),
+				tasks: await all('SELECT id, goal_id, title, planned_for, weight, completed_at, note, created_at FROM tasks WHERE user_id = ? ORDER BY planned_for, rowid'),
+				materials: await all('SELECT id, task_id, kind, title, url, source, own FROM materials WHERE user_id = ? ORDER BY rowid'),
+				trials: await all('SELECT id, goal_id, taken_on, title, score, max_score, weak_topics FROM trials WHERE user_id = ? ORDER BY taken_on, rowid'),
+				chatMessages: await all('SELECT chat_id, role, content, created_at FROM chat_messages WHERE user_id = ? ORDER BY created_at, rowid')
+			};
+		},
+
+		// Removes the person and, through the foreign keys, everything they stored.
+		async deleteAccount(): Promise<boolean> {
+			const r = await db.prepare('DELETE FROM users WHERE id = ?').bind(userId).run();
+			return (r.meta.changes ?? 0) > 0;
+		},
+
+		async countTasks(): Promise<number> {
+			return (await db.prepare('SELECT COUNT(*) AS n FROM tasks WHERE user_id = ?').bind(userId).first<{ n: number }>())!.n;
+		},
+
+		async countTrials(): Promise<number> {
+			return (await db.prepare('SELECT COUNT(*) AS n FROM trials WHERE user_id = ?').bind(userId).first<{ n: number }>())!.n;
+		},
+
 		async setNick(nick: string): Promise<void> {
 			await db.prepare('UPDATE users SET nick = ? WHERE id = ?').bind(nick, userId).run();
 		},

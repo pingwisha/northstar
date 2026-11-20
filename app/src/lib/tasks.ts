@@ -3,6 +3,8 @@ import { parseDeadline, formatDate, type Parsed } from './goals';
 
 export const MAX_TASK_TITLE = 160;
 export const MAX_NEW_TASKS = 30;
+// A cap per person, so one account cannot fill the shared database.
+export const MAX_TASKS_TOTAL = 3000;
 
 // One task per line. A bullet or a number at the start of a line is dropped.
 export function parseTaskTitles(raw: unknown): Parsed<string[]> {
