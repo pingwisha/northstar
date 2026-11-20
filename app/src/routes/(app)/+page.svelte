@@ -40,7 +40,10 @@
 			</div>
 		</section>
 
-		<a href="/report" class="-mt-2 text-sm text-primary underline underline-offset-2">Недельный отчёт</a>
+		<div class="-mt-2 flex gap-4 text-sm">
+			<a href="/report" class="text-primary underline underline-offset-2">Недельный отчёт</a>
+			<a href="/exam" class="text-primary underline underline-offset-2">Режим экзамена</a>
+		</div>
 
 		{#if form && 'message' in form && form.message && form.action !== 'addTask'}
 			<p role="alert" class="text-sm text-destructive">{form.message}</p>
