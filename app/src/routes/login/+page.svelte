@@ -36,5 +36,5 @@
 	>
 		Войти через Google
 	</a>
-	<p class="text-sm text-muted-foreground">Входя, ты соглашаешься с <a href="/privacy" class="underline underline-offset-2">правилами хранения данных</a>.</p>
+	<p class="text-sm text-muted-foreground">Входя, ты соглашаешься с <a href="/terms" class="underline underline-offset-2">условиями использования</a> и <a href="/privacy" class="underline underline-offset-2">правилами хранения данных</a>.</p>
 </main>

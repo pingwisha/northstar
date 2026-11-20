@@ -9,7 +9,7 @@ export const TIMEZONE_COOKIE = 'tz';
 // Everything except the sign-in page and the sign-in routes needs a signed-in
 // person. The person comes only from the session cookie: no header, query or
 // body field can name a user.
-const PUBLIC = ['/login', '/auth/', '/privacy'];
+const PUBLIC = ['/login', '/auth/', '/privacy', '/terms'];
 
 const wantsPage = (method: string, path: string, accept: string | null): boolean =>
 	(method === 'GET' || method === 'HEAD') && !path.startsWith('/api/') && (accept ?? '').includes('text/html');

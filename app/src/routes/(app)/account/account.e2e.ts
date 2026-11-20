@@ -8,6 +8,8 @@ test('anyone can read the privacy page, a person downloads their data and delete
 	// The privacy page is open without signing in.
 	await page.goto('/privacy');
 	await expect(page.getByRole('heading', { name: 'Конфиденциальность' })).toBeVisible();
+	await page.goto('/terms');
+	await expect(page.getByRole('heading', { name: 'Условия использования' })).toBeVisible();
 
 	const today = todayIso();
 	seedDb(`INSERT INTO goals (id, user_id, title, start_date, deadline) VALUES ('ac-g', '${E2E.account.id}', 'Моя цель для выгрузки', '${today}', '2030-01-01')`);
