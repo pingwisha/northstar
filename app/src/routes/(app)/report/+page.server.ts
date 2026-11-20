@@ -20,7 +20,7 @@ async function report(locals: App.Locals, platform: App.Platform | undefined) {
 	if (!env || !locals.userId) error(503, 'База данных не подключена');
 	const me = scoped(env.DB, locals.userId);
 	const [goals, tasks, trials] = await Promise.all([me.listGoals(), me.listGoalTasks(), me.listTrials()]);
-	return { env, weekly: buildWeekly(goals, tasks, trials, todayIso()) };
+	return { env, weekly: buildWeekly(goals, tasks, trials, todayIso(undefined, locals.timezone), locals.timezone) };
 }
 
 export const load: PageServerLoad = async ({ locals, platform }) => {

@@ -17,7 +17,7 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 	const titles = new Map(goals.map((g) => [g.id, g.title]));
 	const goalsWithTrials = goals.filter((g) => g.status === 'active' || trials.some((t) => t.goalId === g.id));
 	return {
-		today: todayIso(),
+		today: todayIso(undefined, locals.timezone),
 		activeGoals: goals.filter((g) => g.status === 'active').map((g) => ({ id: g.id, title: g.title })),
 		// One block per goal: its own chart and weak topics.
 		blocks: goalsWithTrials.map((g) => {
@@ -40,7 +40,7 @@ export const actions: Actions = {
 		const me = await mine(locals, platform);
 		const data = await request.formData();
 		const values = { goalId: field(data, 'goalId'), title: field(data, 'title'), day: field(data, 'day'), score: field(data, 'score'), maxScore: field(data, 'maxScore'), topics: field(data, 'topics') };
-		const parsed = parseTrial(values, todayIso());
+		const parsed = parseTrial(values, todayIso(undefined, locals.timezone));
 		if (!parsed.ok) return fail(400, { action: 'add', message: parsed.message, values });
 		if (!(await me.addTrial(values.goalId, parsed.value))) return fail(404, { action: 'add', message: 'Выбери цель из списка.', values });
 		return { action: 'add', ok: true };

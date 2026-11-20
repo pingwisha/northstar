@@ -1,6 +1,5 @@
-import { execSync } from 'node:child_process';
 import { expect, test } from '@playwright/test';
-import { E2E, signInAs } from '../../../../e2e/support';
+import { E2E, signInAs, seedDb } from '../../../../e2e/support';
 import { todayIso } from '../../../lib/goals';
 
 test.use({ viewport: { width: 390, height: 844 } });
@@ -14,7 +13,7 @@ test('the calendar shows every planned day and a day opens its tasks', async ({ 
 		`INSERT INTO goals (id, user_id, title, start_date, deadline) VALUES ('cal-g', '${E2E.calendar.id}', 'Подготовить проект', '${today}', '${addDays(today, 60)}')`,
 		`INSERT INTO tasks (id, user_id, goal_id, title, planned_for) VALUES ('cal-t1', '${E2E.calendar.id}', 'cal-g', 'Написать план проекта', '${today}'), ('cal-t2', '${E2E.calendar.id}', 'cal-g', 'Собрать материалы', '${later}')`
 	].join('; ');
-	execSync(`npx wrangler d1 execute northstar --local --command "${sql}"`, { stdio: 'ignore' });
+	seedDb(sql);
 
 	await signInAs(context, E2E.calendar);
 	await page.goto('/calendar');

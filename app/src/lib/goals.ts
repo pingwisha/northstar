@@ -1,16 +1,28 @@
 // Rules for goals that need no database: today's date and what a goal may contain.
 
-// The site is used in one time zone for now; "today" must not flip at UTC midnight.
+// "Today" must not flip at UTC midnight. Each person's own time zone comes from their browser;
+// until it is known, and for an unknown name, this one is used.
 export const TIMEZONE = 'Europe/Belgrade';
+
+// A zone name the runtime knows, such as America/New_York; anything else is not accepted.
+export function validTimeZone(name: unknown): name is string {
+	if (typeof name !== 'string' || name.length === 0 || name.length > 64) return false;
+	try {
+		new Intl.DateTimeFormat('en-CA', { timeZone: name });
+		return true;
+	} catch {
+		return false;
+	}
+}
 
 export const MAX_TITLE = 120;
 export const MAX_DESCRIPTION = 500;
 export const MAX_ACTIVE_GOALS = 20;
 const MAX_YEARS_AHEAD = 10;
 
-// Today as YYYY-MM-DD in the site's time zone.
-export function todayIso(now: Date = new Date()): string {
-	return new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+// Today as YYYY-MM-DD in the given time zone.
+export function todayIso(now: Date = new Date(), timeZone: string = TIMEZONE): string {
+	return new Intl.DateTimeFormat('en-CA', { timeZone: validTimeZone(timeZone) ? timeZone : TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
 }
 
 export type Parsed<T> = { ok: true; value: T } | { ok: false; message: string };

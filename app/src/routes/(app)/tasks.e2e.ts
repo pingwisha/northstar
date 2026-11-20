@@ -1,6 +1,5 @@
-import { execSync } from 'node:child_process';
 import { expect, test } from '@playwright/test';
-import { E2E, signInAs } from '../../../e2e/support';
+import { E2E, signInAs, seedDb } from '../../../e2e/support';
 import { todayIso } from '../../lib/goals';
 
 test.use({ viewport: { width: 390, height: 844 } });
@@ -8,7 +7,7 @@ test.use({ viewport: { width: 390, height: 844 } });
 test('a person adds, renames and deletes their own tasks', async ({ page, context }) => {
 	const today = todayIso();
 	const sql = `INSERT INTO goals (id, user_id, title, start_date, deadline) VALUES ('tk-g', '${E2E.tasks.id}', 'Выучить 100 слов', '${today}', '2030-01-01')`;
-	execSync(`npx wrangler d1 execute northstar --local --command "${sql}"`, { stdio: 'ignore' });
+	seedDb(sql);
 	await signInAs(context, E2E.tasks);
 	await page.goto('/');
 

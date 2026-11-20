@@ -1,6 +1,5 @@
-import { execSync } from 'node:child_process';
 import { expect, test } from '@playwright/test';
-import { E2E, signInAs } from '../../../../e2e/support';
+import { E2E, signInAs, seedDb } from '../../../../e2e/support';
 import { todayIso } from '../../../lib/goals';
 
 test.use({ viewport: { width: 390, height: 844 } });
@@ -8,10 +7,10 @@ test.use({ viewport: { width: 390, height: 844 } });
 test('the weekly report shows the real numbers and no AI button to a member', async ({ page, context }) => {
 	const today = todayIso();
 	const sql = [
-		`INSERT INTO goals (id, user_id, title, start_date, deadline) VALUES ('rp-g', '${E2E.report.id}', 'Выучить 100 слов', '${today}', '2030-01-01')`,
-		`INSERT INTO tasks (id, user_id, goal_id, title, planned_for, completed_at) VALUES ('rp-1', '${E2E.report.id}', 'rp-g', 'Первая', '${today}', '${today}T08:00:00Z'), ('rp-2', '${E2E.report.id}', 'rp-g', 'Вторая', '${today}', NULL)`
+		`INSERT INTO goals (id, user_id, title, start_date, deadline) VALUES ('wk-g', '${E2E.report.id}', 'Выучить 100 слов', '${today}', '2030-01-01')`,
+		`INSERT INTO tasks (id, user_id, goal_id, title, planned_for, completed_at) VALUES ('wk-1', '${E2E.report.id}', 'wk-g', 'Первая', '${today}', '${today}T08:00:00Z'), ('wk-2', '${E2E.report.id}', 'wk-g', 'Вторая', '${today}', NULL)`
 	].join('; ');
-	execSync(`npx wrangler d1 execute northstar --local --command "${sql}"`, { stdio: 'ignore' });
+	seedDb(sql);
 	await signInAs(context, E2E.report);
 	await page.goto('/');
 	await expect(async () => {

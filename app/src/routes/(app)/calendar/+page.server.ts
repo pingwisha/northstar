@@ -18,7 +18,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export const load: PageServerLoad = async ({ locals, platform, url }) => {
 	const me = await mine(locals, platform);
-	const today = todayIso();
+	const today = todayIso(undefined, locals.timezone);
 	const month = parseMonth(url.searchParams.get('month'), today);
 	const rawDay = url.searchParams.get('day');
 	// The open day: the one in the address, else today when it is in this month.

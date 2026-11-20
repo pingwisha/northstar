@@ -7,6 +7,8 @@ declare global {
 			userId?: string;
 			email?: string;
 			role?: 'owner' | 'member';
+			// The person's time zone from the tz cookie their browser sets; only a valid name is kept.
+			timezone?: string;
 		}
 		interface Platform {
 			// Only tests and local tools fill this. The site reads bindings through appEnv() in

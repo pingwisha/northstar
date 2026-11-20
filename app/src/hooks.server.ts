@@ -1,8 +1,10 @@
 import type { Handle } from '@sveltejs/kit/hooks';
+import { validTimeZone } from './lib/goals';
 import { resolveIdentity } from './lib/server/auth/signin';
 import { appEnv } from './lib/server/env';
 
 export const SESSION_COOKIE = 'session';
+export const TIMEZONE_COOKIE = 'tz';
 
 // Everything except the sign-in page and the sign-in routes needs a signed-in
 // person. The person comes only from the session cookie: no header, query or
@@ -15,6 +17,9 @@ const wantsPage = (method: string, path: string, accept: string | null): boolean
 export const handle: Handle = async ({ event, resolve }) => {
 	const path = event.url.pathname;
 	const isPublic = PUBLIC.some((p) => path === p || path.startsWith(p.endsWith('/') ? p : p + '/'));
+
+	const tz = event.cookies.get(TIMEZONE_COOKIE);
+	if (validTimeZone(tz)) event.locals.timezone = tz;
 
 	let identity = null;
 	const env = await appEnv(event.platform);

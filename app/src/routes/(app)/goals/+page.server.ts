@@ -17,7 +17,7 @@ async function mine(locals: App.Locals, platform: App.Platform | undefined) {
 
 export const load: PageServerLoad = async ({ locals, platform }) => {
 	const me = await mine(locals, platform);
-	const today = todayIso();
+	const today = todayIso(undefined, locals.timezone);
 	const [goals, tasks] = await Promise.all([me.listGoals(), me.listGoalTasks()]);
 	return { today, ...buildCards(goals, tasks, today) };
 };
@@ -38,7 +38,7 @@ export const actions: Actions = {
 		const me = await mine(locals, platform);
 		const data = await request.formData();
 		const values = { title: field(data, 'title'), description: field(data, 'description'), deadline: field(data, 'deadline') };
-		const today = todayIso();
+		const today = todayIso(undefined, locals.timezone);
 		const parsed = parseNewGoal(values, today);
 		if (!parsed.ok) return fail(400, { action: 'add', message: parsed.message, values });
 		if ((await me.countActiveGoals()) >= MAX_ACTIVE_GOALS) {
@@ -52,7 +52,7 @@ export const actions: Actions = {
 		const me = await mine(locals, platform);
 		const data = await request.formData();
 		const goalId = field(data, 'id');
-		const parsed = parseDeadline(field(data, 'deadline'), todayIso());
+		const parsed = parseDeadline(field(data, 'deadline'), todayIso(undefined, locals.timezone));
 		if (!parsed.ok) return fail(400, { action: 'deadline', goalId, message: parsed.message });
 		if (!(await me.setDeadline(goalId, parsed.value))) return fail(404, { action: 'deadline', goalId, message: 'Такой цели нет.' });
 		return { action: 'deadline', ok: true };
@@ -70,7 +70,7 @@ export const actions: Actions = {
 		const goalId = field(await request.formData(), 'id');
 		const goal = (await me.listGoals()).find((g) => g.id === goalId && g.status === 'active');
 		if (!goal) return fail(404, { action: 'behind', goalId, message: 'Такой цели нет.' });
-		const today = todayIso();
+		const today = todayIso(undefined, locals.timezone);
 		if (daysUntil(today, goal.deadline) < 0) return fail(400, { action: 'behind', goalId, message: PLAN_MESSAGES.deadline_passed });
 		const own = (await me.listGoalTasks()).filter((t) => t.goal_id === goal.id);
 		if (own.length === 0) return fail(400, { action: 'behind', goalId, message: 'У цели ещё нет плана, пересчитывать нечего.' });
@@ -87,7 +87,7 @@ export const actions: Actions = {
 		const goal = (await me.listGoals()).find((g) => g.id === goalId && g.status === 'active');
 		if (!goal) return fail(404, { action: 'plan', goalId, message: 'Такой цели нет.' });
 
-		const result = await generatePlan(env!, { userId: locals.userId!, role: locals.role ?? 'member' }, goal, todayIso());
+		const result = await generatePlan(env!, { userId: locals.userId!, role: locals.role ?? 'member' }, goal, todayIso(undefined, locals.timezone));
 		if (!result.ok) return fail(result.error === 'not_available' ? 403 : 502, { action: 'plan', goalId, message: PLAN_MESSAGES[result.error] });
 
 		const saved = await me.savePlan(goal.id, result.stages);

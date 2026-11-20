@@ -40,6 +40,15 @@ describe('buildWeekly', () => {
 	});
 });
 
+describe('time zones', () => {
+	it('counts a tick by the day it was in the persons own zone', () => {
+		// 23:30 UTC on the 13th is already the 14th in Moscow, the first day of the window, and still the 13th in New York.
+		const tasks = [task('2026-11-14', '2026-11-13T23:30:00Z')];
+		expect(buildWeekly([goal], tasks, [], today, 'Europe/Moscow').doneInWeek).toBe(1);
+		expect(buildWeekly([goal], tasks, [], today, 'America/New_York').doneInWeek).toBe(0);
+	});
+});
+
 describe('numbersAreKnown', () => {
 	const w = buildWeekly([goal], [task('2026-11-20', '2026-11-20T08:00:00Z')], [], today);
 	const context = weeklyContext(w);

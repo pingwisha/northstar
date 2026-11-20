@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDate, MAX_DESCRIPTION, MAX_TITLE, parseDeadline, parseNewGoal, todayIso } from './goals';
+import { formatDate, MAX_DESCRIPTION, MAX_TITLE, parseDeadline, parseNewGoal, todayIso, validTimeZone } from './goals';
 
 const today = '2026-11-18';
 
@@ -50,5 +50,22 @@ describe('parseNewGoal', () => {
 describe('formatDate', () => {
 	it('writes day, month, year', () => {
 		expect(formatDate('2027-05-18')).toBe('18.05.2027');
+	});
+});
+
+describe('time zones', () => {
+	const moment = new Date('2026-11-18T23:30:00Z');
+	it('gives each person their own today', () => {
+		expect(todayIso(moment, 'Europe/Moscow')).toBe('2026-11-19');
+		expect(todayIso(moment, 'America/New_York')).toBe('2026-11-18');
+		expect(todayIso(moment, 'Pacific/Auckland')).toBe('2026-11-19');
+	});
+	it('falls back to the default zone for an unknown name instead of failing', () => {
+		expect(todayIso(moment, 'Не/Зона')).toBe(todayIso(moment));
+	});
+	it('accepts only real zone names', () => {
+		expect(validTimeZone('America/New_York')).toBe(true);
+		expect(validTimeZone('Europe/Moscow')).toBe(true);
+		for (const bad of ['', 'nonsense', undefined, 42, 'x'.repeat(100), '<script>']) expect(validTimeZone(bad)).toBe(false);
 	});
 });

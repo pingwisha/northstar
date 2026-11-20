@@ -17,7 +17,7 @@ async function exams(me: ReturnType<typeof scoped>, today: string) {
 }
 
 export const load: PageServerLoad = async ({ locals, platform }) => {
-	const today = todayIso();
+	const today = todayIso(undefined, locals.timezone);
 	return { today, goals: await exams(await mine(locals, platform), today) };
 };
 
@@ -26,7 +26,7 @@ export const actions: Actions = {
 	addReviews: async ({ request, locals, platform }) => {
 		const me = await mine(locals, platform);
 		const goalId = String((await request.formData()).get('goalId') ?? '');
-		const today = todayIso();
+		const today = todayIso(undefined, locals.timezone);
 		const goal = (await exams(me, today)).find((g) => g.id === goalId);
 		if (!goal) return fail(404, { action: 'addReviews', message: 'Выбери цель из списка.' });
 		if (goal.toReview.length === 0) return fail(400, { action: 'addReviews', goalId, message: 'Нечего добавлять: для слабых тем повторение уже запланировано.' });

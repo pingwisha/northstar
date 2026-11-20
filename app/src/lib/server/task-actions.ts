@@ -32,7 +32,7 @@ export const taskActions = {
 		if (!goal) return fail(404, { action: 'addTask', message: 'Выбери цель из списка.', values });
 		const titles = parseTaskTitles(values.titles);
 		if (!titles.ok) return fail(400, { action: 'addTask', message: titles.message, values });
-		const day = parseTaskDay(values.day, todayIso(), goal.deadline);
+		const day = parseTaskDay(values.day, todayIso(undefined, event.locals.timezone), goal.deadline);
 		if (!day.ok) return fail(400, { action: 'addTask', message: day.message, values });
 		if (!(await me.addTasks(goal.id, titles.value, day.value))) return fail(404, { action: 'addTask', message: 'Выбери цель из списка.', values });
 		return { action: 'addTask', ok: true };
@@ -48,7 +48,7 @@ export const taskActions = {
 		const title = parseOneTitle(field(data, 'title'));
 		if (!title.ok) return fail(400, { action: 'editTask', taskId, message: title.message });
 		// A task that stays on its day, even one already past, may be renamed without moving it.
-		const day = field(data, 'day') === task.planned_for ? ({ ok: true, value: task.planned_for } as const) : parseTaskDay(field(data, 'day'), todayIso(), goal.deadline);
+		const day = field(data, 'day') === task.planned_for ? ({ ok: true, value: task.planned_for } as const) : parseTaskDay(field(data, 'day'), todayIso(undefined, event.locals.timezone), goal.deadline);
 		if (!day.ok) return fail(400, { action: 'editTask', taskId, message: day.message });
 		if (!(await me.updateTask(task.id, title.value, day.value))) return fail(404, { action: 'editTask', taskId, message: NO_TASK });
 		return { action: 'editTask', ok: true };

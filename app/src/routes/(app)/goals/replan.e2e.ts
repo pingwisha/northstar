@@ -1,6 +1,5 @@
-import { execSync } from 'node:child_process';
 import { expect, test } from '@playwright/test';
-import { E2E, signInAs } from '../../../../e2e/support';
+import { E2E, signInAs, seedDb } from '../../../../e2e/support';
 import { todayIso } from '../../../lib/goals';
 
 test.use({ viewport: { width: 390, height: 844 } });
@@ -14,7 +13,7 @@ test('a person who fell behind recalculates the plan and sees what changed', asy
 		`INSERT INTO goals (id, user_id, title, start_date, deadline) VALUES ('rp-g', '${E2E.replan.id}', 'Подготовить доклад', '${addDays(today, -7)}', '${addDays(today, 20)}')`,
 		`INSERT INTO tasks (id, user_id, goal_id, title, planned_for) VALUES ${rows}`
 	].join('; ');
-	execSync(`npx wrangler d1 execute northstar --local --command "${sql}"`, { stdio: 'ignore' });
+	seedDb(sql);
 
 	await signInAs(context, E2E.replan);
 	await page.goto('/goals');

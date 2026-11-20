@@ -1,13 +1,12 @@
-import { execSync } from 'node:child_process';
 import { expect, test } from '@playwright/test';
-import { E2E, signInAs } from '../../../../e2e/support';
+import { E2E, seedDb, signInAs } from '../../../../e2e/support';
 import { todayIso } from '../../../lib/goals';
 
 test.use({ viewport: { width: 390, height: 844 } });
 
 test('a person records practice test results and sees growth and weak topics', async ({ page, context }) => {
 	const today = todayIso();
-	execSync(`npx wrangler d1 execute northstar --local --command "INSERT INTO goals (id, user_id, title, start_date, deadline) VALUES ('tr-g', '${E2E.trials.id}', 'Сдать ОГЭ', '${today}', '2030-01-01')"`, { stdio: 'ignore' });
+	seedDb(`INSERT INTO goals (id, user_id, title, start_date, deadline) VALUES ('tr-g', '${E2E.trials.id}', 'Сдать ОГЭ', '${today}', '2030-01-01')`);
 	await signInAs(context, E2E.trials);
 	await page.goto('/trials');
 

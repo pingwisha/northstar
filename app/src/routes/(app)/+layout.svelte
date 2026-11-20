@@ -1,11 +1,24 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { applyTheme, nextTheme, readTheme, THEME_LABEL, type Theme } from '$lib/theme';
 
 	let { data, children } = $props();
 	let theme = $state<Theme>('auto');
-	onMount(() => (theme = readTheme()));
+	onMount(() => {
+		theme = readTheme();
+		// The browser knows the person's time zone; the server learns it from a cookie and then reloads the day.
+		try {
+			const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+			if (zone && !document.cookie.split('; ').includes(`tz=${zone}`)) {
+				document.cookie = `tz=${zone}; path=/; max-age=31536000; samesite=lax`;
+				invalidateAll();
+			}
+		} catch {
+			// Without it the default zone stays.
+		}
+	});
 	function cycle() {
 		theme = nextTheme(theme);
 		applyTheme(theme);

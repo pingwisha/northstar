@@ -1,7 +1,7 @@
 // The weekly report. Every number comes from the stored rows; the AI only comments on them.
 // Pure: no database, no clock.
 import type { GoalData, TaskData } from './goal-view';
-import { formatDate } from './goals';
+import { formatDate, todayIso } from './goals';
 import { daysLabel, daysUntil, groupPercent, pace } from './progress';
 import { percentOf, summarizeTrials, type Trial } from './trials';
 
@@ -35,7 +35,9 @@ export interface Weekly {
 	weak: { topic: string; count: number }[];
 }
 
-export function buildWeekly(goals: GoalData[], tasks: TaskRow[], trials: Trial[], today: string): Weekly {
+// A task is ticked off at a moment (UTC); the day it counts for is that moment in the person's zone.
+export function buildWeekly(goals: GoalData[], tasks: TaskRow[], trials: Trial[], today: string, timeZone?: string): Weekly {
+	const dayOf = (moment: string): string => todayIso(new Date(moment), timeZone);
 	const from = addDays(today, -6);
 	const active = goals.filter((g) => g.status === 'active');
 	const rows = active.map((g): WeeklyGoal => {
@@ -50,7 +52,7 @@ export function buildWeekly(goals: GoalData[], tasks: TaskRow[], trials: Trial[]
 			deadline: g.deadline,
 			planned: week.length,
 			plannedDone: week.filter((t) => t.completed_at !== null).length,
-			doneInWeek: own.filter((t) => t.completed_at !== null && t.completed_at.slice(0, 10) >= from && t.completed_at.slice(0, 10) <= today).length,
+			doneInWeek: own.filter((t) => t.completed_at !== null && dayOf(t.completed_at) >= from && dayOf(t.completed_at) <= today).length,
 			overdue: own.filter((t) => t.completed_at === null && t.planned_for < today).length
 		};
 	});

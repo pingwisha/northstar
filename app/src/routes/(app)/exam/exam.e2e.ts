@@ -1,6 +1,5 @@
-import { execSync } from 'node:child_process';
 import { expect, test } from '@playwright/test';
-import { E2E, signInAs } from '../../../../e2e/support';
+import { E2E, signInAs, seedDb } from '../../../../e2e/support';
 import { todayIso } from '../../../lib/goals';
 
 test.use({ viewport: { width: 390, height: 844 } });
@@ -14,7 +13,7 @@ test('exam mode counts down, shows the last weeks and adds reviews of weak topic
 		`INSERT INTO tasks (id, user_id, goal_id, title, planned_for) VALUES ('ex-t', '${E2E.exam.id}', 'ex-g', 'Решить вариант', '${addDays(today, 18)}')`,
 		`INSERT INTO trials (id, user_id, goal_id, taken_on, title, score, max_score, weak_topics) VALUES ('ex-r', '${E2E.exam.id}', 'ex-g', '${today}', 'Пробник 1', 10, 30, 'Дроби, Графики')`
 	].join('; ');
-	execSync(`npx wrangler d1 execute northstar --local --command "${sql}"`, { stdio: 'ignore' });
+	seedDb(sql);
 	await signInAs(context, E2E.exam);
 	await page.goto('/');
 	await expect(async () => {

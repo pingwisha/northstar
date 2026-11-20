@@ -40,7 +40,7 @@ export const actions: Actions = {
 
 		const chatId = (await me.currentChat()) ?? (await me.createChat());
 		const history = (await me.chatMessages(chatId, HISTORY)).map((m): ChatMessage => ({ role: m.role, content: m.content }));
-		const today = todayIso();
+		const today = todayIso(undefined, locals.timezone);
 		const [goals, tasks, materials] = await Promise.all([me.listGoals(), me.listGoalTasks(), me.listMaterials()]);
 		const messages: ChatMessage[] = [systemMessage(buildChatContext(goals, tasks, today, materials)), ...history, { role: 'user', content: question }];
 

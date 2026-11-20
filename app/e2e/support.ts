@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import type { BrowserContext } from '@playwright/test';
 import { SignJWT } from 'jose';
 
@@ -16,7 +17,8 @@ export const E2E = {
 	materials: { id: 'e2e-materials', email: 'e2e-materials@example.com' },
 	trials: { id: 'e2e-trials', email: 'e2e-trials@example.com' },
 	report: { id: 'e2e-report', email: 'e2e-report@example.com' },
-	exam: { id: 'e2e-exam', email: 'e2e-exam@example.com' }
+	exam: { id: 'e2e-exam', email: 'e2e-exam@example.com' },
+	zone: { id: 'e2e-zone', email: 'e2e-zone@example.com' }
 } as const;
 
 type Person = { id: string; email: string };
@@ -30,4 +32,17 @@ export async function signInAs(context: BrowserContext, person: Person): Promise
 		.setExpirationTime('1h')
 		.sign(new TextEncoder().encode(E2E.secret));
 	await context.addCookies([{ name: 'session', value: token, url: E2E.origin }]);
+}
+
+// Puts rows into the local test database. Tests run side by side and the database file can be busy for a moment, so it retries.
+export function seedDb(sql: string): void {
+	for (let attempt = 1; ; attempt++) {
+		try {
+			execSync(`npx wrangler d1 execute northstar --local --command "${sql}"`, { stdio: 'pipe' });
+			return;
+		} catch (err) {
+			if (attempt >= 5) throw new Error(`seedDb failed: ${String((err as { stderr?: Buffer }).stderr ?? err).slice(0, 600)}`);
+			Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 400 * attempt);
+		}
+	}
 }
