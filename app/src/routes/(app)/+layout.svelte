@@ -45,7 +45,7 @@
 	<div class="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-2.5">
 		<a href="/" class="flex items-center gap-2 text-lg font-semibold tracking-tight">
 			<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" class="text-primary" aria-hidden="true"><path d="M12 2l2.9 6.9L22 10l-5.5 4.8L18.2 22 12 18.3 5.8 22l1.7-7.2L2 10l7.1-1.1z" /></svg>
-			Northstar
+			Northstart
 		</a>
 
 		<nav

@@ -13,7 +13,7 @@
 	const xy = (i: number, n: number, percent: number) => [n === 1 ? W / 2 : PAD + (i * (W - 2 * PAD)) / (n - 1), PAD + ((100 - percent) * (H - 2 * PAD)) / 100] as const;
 </script>
 
-<svelte:head><title>Пробники. Northstar</title></svelte:head>
+<svelte:head><title>Пробники. Northstart</title></svelte:head>
 
 <main class="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8">
 	<div class="flex items-center justify-between gap-3">

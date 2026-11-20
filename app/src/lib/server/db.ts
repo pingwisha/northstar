@@ -75,6 +75,15 @@ export async function findOrCreateUser(db: D1Database, verifiedEmail: string, ro
 	return user;
 }
 
+export async function userExists(db: D1Database, email: string): Promise<boolean> {
+	return (await db.prepare('SELECT 1 AS ok FROM users WHERE email = ?').bind(normalize(email)).first()) !== null;
+}
+
+// New accounts made since the start of a UTC day (YYYY-MM-DD), for the daily sign-up cap.
+export async function countUsersSince(db: D1Database, day: string): Promise<number> {
+	return (await db.prepare('SELECT COUNT(*) AS n FROM users WHERE created_at >= ?').bind(day).first<{ n: number }>())!.n;
+}
+
 export async function isInvited(db: D1Database, email: string): Promise<boolean> {
 	return (await db.prepare('SELECT 1 AS ok FROM invites WHERE email = ?').bind(normalize(email)).first()) !== null;
 }

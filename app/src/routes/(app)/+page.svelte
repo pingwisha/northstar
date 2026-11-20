@@ -12,7 +12,7 @@
 
 
 
-<svelte:head><title>Сегодня. Northstar</title></svelte:head>
+<svelte:head><title>Сегодня. Northstart</title></svelte:head>
 
 <main class="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8">
 	<h1 class="text-3xl font-semibold">Сегодня</h1>

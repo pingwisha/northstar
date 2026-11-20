@@ -7,7 +7,7 @@
 	const later = $derived(data.goals.filter((g) => !g.exam));
 </script>
 
-<svelte:head><title>Режим экзамена. Northstar</title></svelte:head>
+<svelte:head><title>Режим экзамена. Northstart</title></svelte:head>
 
 <main class="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8">
 	<div>

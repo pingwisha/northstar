@@ -18,7 +18,7 @@
 	});
 </script>
 
-<svelte:head><title>Чат. Northstar</title></svelte:head>
+<svelte:head><title>Чат. Northstart</title></svelte:head>
 
 <main class="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-8">
 	<div class="flex items-center justify-between gap-3">

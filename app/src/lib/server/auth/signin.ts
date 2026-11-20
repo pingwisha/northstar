@@ -1,5 +1,5 @@
 // The server side of "Sign in with Google" and of checking a session on a request.
-import { findOrCreateUser, isInvited, scoped, type Role } from '../db';
+import { countUsersSince, findOrCreateUser, isInvited, scoped, userExists, type Role } from '../db';
 import { isAllowed, parseAllowlist } from './allowlist';
 import { GOOGLE_TOKEN_URL, googleKeys, verifyIdToken, type VerificationKey } from './google';
 import { createSession, verifySession } from './session';
@@ -15,11 +15,13 @@ export interface AuthEnv {
 	GEMINI_API_KEY?: string;
 	AI_MODEL?: string;
 	DAILY_LIMIT?: string;
+	// With open sign-up: how many new accounts one day may bring (default 30).
+	SIGNUP_DAILY_LIMIT?: string;
 	// Set to "open" to let any verified Google account in as a member. Anything else keeps the site invite-only.
 	SIGNUP?: string;
 }
 
-export type SignInFailure = 'state' | 'exchange' | 'id_token' | 'unverified' | 'not_allowed';
+export type SignInFailure = 'state' | 'exchange' | 'id_token' | 'unverified' | 'not_allowed' | 'signups_full';
 
 export type SignInResult = { ok: true; session: string } | { ok: false; reason: SignInFailure };
 
@@ -42,6 +44,21 @@ export async function roleFor(env: AuthEnv, email: string): Promise<Role | null>
 	if (isAllowed(parseAllowlist(env.ALLOWED_EMAILS), email)) return 'owner';
 	if (env.SIGNUP === 'open') return 'member';
 	return (await isInvited(env.DB, email)) ? 'member' : null;
+}
+
+export const DEFAULT_SIGNUP_LIMIT = 30;
+
+export function signupLimitOf(raw: unknown): number {
+	const n = Number(raw);
+	return Number.isInteger(n) && n >= 0 ? n : DEFAULT_SIGNUP_LIMIT;
+}
+
+// With open sign-up, a brand new person may join only while today's cap is not used up.
+// Owners, invited people and people who already have an account are never turned away.
+export async function signupAllowed(env: AuthEnv, email: string, role: Role, now: Date = new Date()): Promise<boolean> {
+	if (role === 'owner' || env.SIGNUP !== 'open') return true;
+	if ((await isInvited(env.DB, email)) || (await userExists(env.DB, email))) return true;
+	return (await countUsersSince(env.DB, now.toISOString().slice(0, 10))) < signupLimitOf(env.SIGNUP_DAILY_LIMIT);
 }
 
 export async function completeGoogleSignIn(input: SignInInput): Promise<SignInResult> {
@@ -79,6 +96,7 @@ export async function completeGoogleSignIn(input: SignInInput): Promise<SignInRe
 	if (!identity.emailVerified) return { ok: false, reason: 'unverified' };
 	const role = await roleFor(env, identity.email);
 	if (!role) return { ok: false, reason: 'not_allowed' };
+	if (!(await signupAllowed(env, identity.email, role, input.now))) return { ok: false, reason: 'signups_full' };
 
 	const user = await findOrCreateUser(env.DB, identity.email, role);
 	return { ok: true, session: await createSession(env.SESSION_SECRET, { userId: user.id, email: user.email }, input.now) };

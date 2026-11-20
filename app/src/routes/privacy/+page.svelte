@@ -1,8 +1,8 @@
-<svelte:head><title>Конфиденциальность. Northstar</title></svelte:head>
+<svelte:head><title>Конфиденциальность. Northstart</title></svelte:head>
 
 <main class="mx-auto flex max-w-2xl flex-col gap-5 px-4 py-10 leading-relaxed">
 	<h1 class="text-3xl font-semibold">Конфиденциальность</h1>
-	<p class="text-muted-foreground">Northstar помогает вести большие цели: срок, этапы, задачи на каждый день и честный процент.</p>
+	<p class="text-muted-foreground">Northstart помогает вести большие цели: срок, этапы, задачи на каждый день и честный процент.</p>
 
 	<h2 class="text-xl font-semibold">Что сайт хранит</h2>
 	<ul class="list-disc pl-5">

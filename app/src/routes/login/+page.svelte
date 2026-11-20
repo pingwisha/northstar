@@ -6,6 +6,7 @@
 		cancelled: 'Вход отменён. Можно попробовать ещё раз.',
 		state: 'Вход не получился: сессия входа устарела. Попробуй ещё раз.',
 		not_allowed: 'Этот аккаунт не в списке приглашённых. Попроси владельца сайта добавить твою почту.',
+		signups_full: 'Сегодня новых регистраций уже много. Попробуй завтра.',
 		unverified: 'Google не подтвердил эту почту. Выбери другой аккаунт.',
 		exchange: 'Не удалось войти через Google. Попробуй ещё раз позже.',
 		id_token: 'Не удалось войти через Google. Попробуй ещё раз позже.'
@@ -15,10 +16,10 @@
 	const problem = $derived(messages[page.url.searchParams.get('error') ?? '']);
 </script>
 
-<svelte:head><title>Вход. Northstar</title></svelte:head>
+<svelte:head><title>Вход. Northstart</title></svelte:head>
 
 <main class="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-4 py-8">
-	<h1 class="text-2xl font-semibold">Northstar</h1>
+	<h1 class="text-2xl font-semibold">Northstart</h1>
 	<p class="text-muted-foreground">
 		Большие цели по шагам: срок, задачи на каждый день и честный процент.
 		{data.open ? 'Войди через Google.' : 'Войди через Google. Сайт пока работает по приглашениям.'}

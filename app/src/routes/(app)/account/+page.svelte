@@ -5,7 +5,7 @@
 	let asking = $state(false);
 </script>
 
-<svelte:head><title>Мои данные. Northstar</title></svelte:head>
+<svelte:head><title>Мои данные. Northstart</title></svelte:head>
 
 <main class="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8">
 	<h1 class="text-3xl font-semibold">Мои данные</h1>

@@ -15,7 +15,7 @@
 	};
 </script>
 
-<svelte:head><title>Календарь. Northstar</title></svelte:head>
+<svelte:head><title>Календарь. Northstart</title></svelte:head>
 
 <main class="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-8">
 	<h1 class="text-3xl font-semibold">Календарь</h1>

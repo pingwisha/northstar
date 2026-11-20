@@ -14,7 +14,7 @@
 	const paceClass = { on_track: 'text-foreground', ahead: 'text-foreground', behind: 'text-destructive' } as const;
 </script>
 
-<svelte:head><title>Мои цели. Northstar</title></svelte:head>
+<svelte:head><title>Мои цели. Northstart</title></svelte:head>
 
 <main class="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8">
 	<div class="flex items-center justify-between gap-3">

@@ -5,7 +5,7 @@ import { GET as exportData } from '../src/routes/(app)/account/export/+server';
 import { actions } from '../src/routes/(app)/account/+page.server';
 import { actions as trialActions } from '../src/routes/(app)/trials/+page.server';
 import { todayIso } from '../src/lib/goals';
-import { roleFor, resolveIdentity, type AuthEnv } from '../src/lib/server/auth/signin';
+import { roleFor, resolveIdentity, signupAllowed, signupLimitOf, type AuthEnv } from '../src/lib/server/auth/signin';
 import { createSession } from '../src/lib/server/auth/session';
 import { scoped } from '../src/lib/server/db';
 import { taskActions } from '../src/lib/server/task-actions';
@@ -117,5 +117,25 @@ describe('caps per person', () => {
 		for (const [k, v] of Object.entries({ goalId, title: 'Ещё', day: todayIso(), score: '1', maxScore: '2', topics: '' })) body.set(k, v);
 		const res = await trialActions.add!({ request: new Request('http://localhost/', { method: 'POST', body }), locals: { userId: 'a' }, platform: platform() } as never);
 		expect(res).toMatchObject({ status: 400 });
+	});
+});
+
+describe('daily sign-up cap', () => {
+	const env = (extra: Partial<AuthEnv>) => ({ DB: db, ALLOWED_EMAILS: 'owner@example.com', SIGNUP: 'open', ...extra }) as AuthEnv;
+	it('turns a new person away once the day is full, but not people already known', async () => {
+		const now = new Date();
+		// a@ and b@ were created just now: two new accounts today.
+		expect(await signupAllowed(env({ SIGNUP_DAILY_LIMIT: '3' }), 'new@example.com', 'member', now)).toBe(true);
+		expect(await signupAllowed(env({ SIGNUP_DAILY_LIMIT: '2' }), 'new@example.com', 'member', now)).toBe(false);
+		expect(await signupAllowed(env({ SIGNUP_DAILY_LIMIT: '2' }), 'a@example.com', 'member', now)).toBe(true);
+		expect(await signupAllowed(env({ SIGNUP_DAILY_LIMIT: '2' }), 'owner@example.com', 'owner', now)).toBe(true);
+		await db.prepare("INSERT INTO invites (email) VALUES ('friend@example.com')").run();
+		expect(await signupAllowed(env({ SIGNUP_DAILY_LIMIT: '2' }), 'friend@example.com', 'member', now)).toBe(true);
+	});
+	it('does not count when sign-up is closed, and a bad limit falls back to the default', async () => {
+		expect(await signupAllowed(env({ SIGNUP: undefined, SIGNUP_DAILY_LIMIT: '0' }), 'x@example.com', 'member')).toBe(true);
+		expect(signupLimitOf('abc')).toBe(30);
+		expect(signupLimitOf('-1')).toBe(30);
+		expect(signupLimitOf('0')).toBe(0);
 	});
 });
