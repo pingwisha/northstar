@@ -169,14 +169,14 @@
 	<section class="flex flex-col items-center gap-4 pb-4 text-center" aria-label={t.startTitle}>
 		<h2 class="text-3xl font-semibold tracking-tight">{t.startTitle}</h2>
 		<a href="/auth/google" class="inline-flex h-12 items-center justify-center rounded-md bg-primary px-8 font-medium text-primary-foreground transition-transform hover:scale-[1.03]">{t.cta}</a>
-		<p class="text-xs text-muted-foreground">{t.agree} <a href="/terms" class="underline underline-offset-2">{t.terms}</a> {t.and} <a href="/privacy" class="underline underline-offset-2">{t.privacy}</a>.</p>
+		<p class="text-xs text-muted-foreground">{t.agree} <a href="/terms?lang={data.lang}" class="underline underline-offset-2">{t.terms}</a> {t.and} <a href="/privacy?lang={data.lang}" class="underline underline-offset-2">{t.privacy}</a>.</p>
 	</section>
 
 	<footer class="flex flex-wrap justify-between gap-3 border-t pt-4 text-xs text-muted-foreground">
 		<span>© Northstart</span>
 		<span class="flex flex-wrap gap-4">
-			<a href="/privacy" class="underline underline-offset-2">{t.footPrivacy}</a>
-			<a href="/terms" class="underline underline-offset-2">{t.footTerms}</a>
+			<a href="/privacy?lang={data.lang}" class="underline underline-offset-2">{t.footPrivacy}</a>
+			<a href="/terms?lang={data.lang}" class="underline underline-offset-2">{t.footTerms}</a>
 			<a href="mailto:northstart.help@gmail.com" class="underline underline-offset-2">northstart.help@gmail.com</a>
 		</span>
 	</footer>

@@ -6,10 +6,15 @@ test.use({ viewport: { width: 390, height: 844 } });
 
 test('anyone can read the privacy page, a person downloads their data and deletes the account', async ({ page, context }) => {
 	// The privacy page is open without signing in.
-	await page.goto('/privacy');
+	await page.goto('/privacy?lang=ru');
 	await expect(page.getByRole('heading', { name: 'Конфиденциальность' })).toBeVisible();
-	await page.goto('/terms');
+	await page.goto('/terms?lang=ru');
 	await expect(page.getByRole('heading', { name: 'Условия использования' })).toBeVisible();
+	// Without a choice the language follows the browser (English here), and the switch changes it.
+	await page.goto('/privacy');
+	await expect(page.getByRole('heading', { name: 'Privacy' })).toBeVisible();
+	await page.getByTestId('lang-switch').click();
+	await expect(page.getByRole('heading', { name: 'Конфиденциальность' })).toBeVisible();
 
 	const today = todayIso();
 	seedDb(`INSERT INTO goals (id, user_id, title, start_date, deadline) VALUES ('ac-g', '${E2E.account.id}', 'Моя цель для выгрузки', '${today}', '2030-01-01')`);
