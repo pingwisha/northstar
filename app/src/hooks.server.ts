@@ -9,10 +9,10 @@ export const TIMEZONE_COOKIE = 'tz';
 // Everything except the sign-in page and the sign-in routes needs a signed-in
 // person. The person comes only from the session cookie: no header, query or
 // body field can name a user.
-const PUBLIC = ['/login', '/auth/', '/privacy', '/terms'];
+const PUBLIC = ['/welcome', '/login', '/auth/', '/privacy', '/terms'];
 
 const wantsPage = (method: string, path: string, accept: string | null): boolean =>
-	(method === 'GET' || method === 'HEAD') && !path.startsWith('/api/') && (accept ?? '').includes('text/html');
+	(method === 'GET' || method === 'HEAD') && !path.startsWith('/api/') && (path === '/' || (accept ?? '').includes('text/html'));
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const path = event.url.pathname;
@@ -38,7 +38,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 		event.locals.role = identity.role;
 	} else if (!isPublic) {
 		if (wantsPage(event.request.method, path, event.request.headers.get('accept'))) {
-			return new Response(null, { status: 303, headers: { location: '/login' } });
+			// A visitor on the front page gets the description of the site; other closed pages go to sign-in.
+			return new Response(null, { status: 303, headers: { location: path === '/' ? '/welcome' : '/login' } });
 		}
 		return new Response(JSON.stringify({ error: 'sign_in_required' }), {
 			status: 401,

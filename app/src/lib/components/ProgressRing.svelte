@@ -3,7 +3,7 @@
 	// so the percent never depends on reading the arc.
 	import { onMount } from 'svelte';
 
-	let { percent, size = 96, label = 'Прогресс' }: { percent: number; size?: number; label?: string } = $props();
+	let { percent, size = 96, label = 'Прогресс', color = 'var(--primary)' }: { percent: number; size?: number; label?: string; color?: string } = $props();
 
 	// The arc starts empty and grows to the percent once the page is shown; the number in the
 	// middle is always the real value.
@@ -29,7 +29,8 @@
 			stroke-linecap="round"
 			stroke-dasharray={circumference}
 			stroke-dashoffset={offset}
-			class="text-primary transition-[stroke-dashoffset] duration-1000 ease-out motion-reduce:transition-none"
+			style:color={color}
+			class="transition-[stroke-dashoffset] duration-1000 ease-out motion-reduce:transition-none"
 		/>
 	</svg>
 	<span class="absolute font-semibold tabular-nums" style:font-size="{Math.round(size / 4)}px">{percent}%</span>

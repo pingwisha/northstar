@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Logo from '$lib/components/Logo.svelte';
 	import { page } from '$app/state';
 
 	// Failure reasons from the sign-in route, mapped to texts.
@@ -19,7 +20,7 @@
 <svelte:head><title>Вход. Northstart</title></svelte:head>
 
 <main class="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-4 py-8">
-	<h1 class="text-2xl font-semibold">Northstart</h1>
+	<h1 class="flex items-center gap-3 text-2xl font-semibold"><Logo size={36} /> Northstart</h1>
 	<p class="text-muted-foreground">
 		Большие цели по шагам: срок, задачи на каждый день и честный процент.
 		{data.open ? 'Войди через Google.' : 'Войди через Google. Сайт пока работает по приглашениям.'}

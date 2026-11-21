@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_TASKS, parseMaterials, parsePlan, replan, schedulePlan, targetTaskCount, type PlanStage } from './plan';
+import { MAX_TASKS, parseMaterials, parsePlan, replan, schedulePlan, snapToStudyDay, spreadDates, targetTaskCount, type PlanStage } from './plan';
 import { daysUntil } from './progress';
 
 const task = (title: string, weight = 1) => ({ title, weight, materials: [] });
@@ -140,5 +140,31 @@ describe('replan', () => {
 	it('warns when the load is heavy', () => {
 		const tasks = Array.from({ length: 20 }, (_, i) => t(String(i), '2026-11-01'));
 		expect(replan(tasks, today, '2026-11-22').summary).toContain('подвинуть срок');
+	});
+});
+
+describe('study days', () => {
+	// 2026-11-20 is a Friday. Monday-Wednesday-Friday = 1 + 4 + 16 = 21.
+	const MWF = 21;
+	const dayOf = (iso: string) => ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][new Date(`${iso}T00:00:00Z`).getUTCDay()];
+
+	it('puts every task on a study day and keeps the order', () => {
+		const dates = spreadDates(Array(12).fill(1), '2026-11-20', '2026-12-20', MWF);
+		for (const d of dates) expect(['Пн', 'Ср', 'Пт']).toContain(dayOf(d));
+		expect([...dates].sort()).toEqual(dates);
+	});
+
+	it('never goes past the deadline, falling back to the last study day', () => {
+		// Deadline on a Sunday, only Monday studied: the last Monday before it.
+		const dates = spreadDates([1, 1, 1], '2026-11-20', '2026-11-22', 1);
+		for (const d of dates) expect(d <= '2026-11-22').toBe(true);
+	});
+
+	it('leaves the dates alone when no study day fits before the deadline', () => {
+		expect(snapToStudyDay('2026-11-21', '2026-11-20', '2026-11-21', 1)).toBe('2026-11-21');
+	});
+
+	it('changes nothing when every day is a study day', () => {
+		expect(spreadDates([1, 1, 1], '2026-11-20', '2026-12-20')).toEqual(spreadDates([1, 1, 1], '2026-11-20', '2026-12-20', 127));
 	});
 });

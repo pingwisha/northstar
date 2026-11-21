@@ -186,8 +186,15 @@ describe('the request hook', () => {
 		return { response, locals: event.locals, resolve };
 	};
 
-	it('sends an anonymous visitor to the sign-in page and gives no content', async () => {
+	it('sends an anonymous visitor on the front page to the welcome page and gives no content', async () => {
 		const { response, resolve } = await run('/');
+		expect(response.status).toBe(303);
+		expect(response.headers.get('location')).toBe('/welcome');
+		expect(resolve).not.toHaveBeenCalled();
+	});
+
+	it('sends an anonymous visitor on any other closed page to the sign-in page', async () => {
+		const { response, resolve } = await run('/goals');
 		expect(response.status).toBe(303);
 		expect(response.headers.get('location')).toBe('/login');
 		expect(resolve).not.toHaveBeenCalled();
@@ -200,6 +207,7 @@ describe('the request hook', () => {
 
 	it('lets anyone reach the sign-in pages', async () => {
 		expect((await run('/login')).response.status).toBe(200);
+		expect((await run('/welcome')).response.status).toBe(200);
 		expect((await run('/auth/google')).response.status).toBe(200);
 	});
 

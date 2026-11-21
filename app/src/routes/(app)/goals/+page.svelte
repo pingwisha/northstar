@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import ProgressRing from '$lib/components/ProgressRing.svelte';
-	import { formatDate } from '$lib/goals';
+	import { WEEKDAYS, formatDate } from '$lib/goals';
+	import { GOAL_COLORS, GOAL_COLOR_NAMES, GOAL_ICONS, GOAL_ICON_KEYS, GOAL_ICON_NAMES } from '$lib/goal-look';
+	import Illustration from '$lib/components/Illustration.svelte';
 
 	let { data, form } = $props();
 
 	const active = $derived(data.cards.filter((c) => c.status === 'active'));
-	const finished = $derived(data.cards.filter((c) => c.status !== 'active'));
+	const finished = $derived(data.cards.filter((c) => c.status === 'done'));
+	const archived = $derived(data.cards.filter((c) => c.status === 'archived'));
 	let adding = $state(false);
 	let editing = $state<string | null>(null);
 	let planning = $state<string | null>(null);
@@ -43,6 +46,19 @@
 				К какому числу
 				<input name="deadline" type="date" required min={data.today} value={form?.values?.deadline ?? ''} class="h-11 rounded-md border bg-background px-3" />
 			</label>
+			{@render lookPicker('add', GOAL_COLORS[data.cards.length % GOAL_COLORS.length], 'target')}
+			<fieldset class="flex flex-col gap-2 text-sm">
+				<input type="hidden" name="days_form" value="1" />
+				<legend class="mb-1">В какие дни недели учишься</legend>
+				<div class="flex flex-wrap gap-2">
+					{#each WEEKDAYS as day (day.bit)}
+						<label class="flex h-10 min-w-12 cursor-pointer items-center justify-center rounded-md border px-3 has-[:checked]:border-primary has-[:checked]:bg-primary/10 has-[:checked]:text-primary">
+							<input type="checkbox" name="days" value={day.bit} checked class="sr-only" aria-label={day.name} />
+							{day.short}
+						</label>
+					{/each}
+				</div>
+			</fieldset>
 			{#if form?.action === 'add' && form.message}
 				<p role="alert" class="text-sm text-destructive">{form.message}</p>
 			{/if}
@@ -52,11 +68,11 @@
 
 	<ul class="flex flex-col gap-4" data-testid="goal-list">
 		{#each active as card (card.id)}
-			<li class="flex flex-col gap-4 rounded-xl border bg-card shadow-sm p-4" data-testid="goal-card">
+			<li class="goal-{card.color} rise flex flex-col gap-4 rounded-xl border border-l-4 border-l-[var(--goal)] bg-card shadow-sm p-4" data-testid="goal-card">
 				<div class="flex items-center gap-4">
-					<ProgressRing percent={card.percent} label={card.title} />
+					<ProgressRing percent={card.percent} label={card.title} color="var(--goal)" />
 					<div class="flex min-w-0 flex-col gap-1">
-						<h2 class="text-lg font-semibold">{card.title}</h2>
+						<h2 class="text-lg font-semibold"><span aria-hidden="true">{card.icon}</span> {card.title}</h2>
 						<p class="text-sm text-muted-foreground">До {formatDate(card.deadline)}, {card.daysLabel}</p>
 						<p class="text-sm font-medium {paceClass[card.pace.state]}">{card.pace.label[0].toUpperCase() + card.pace.label.slice(1)}</p>
 					</div>
@@ -80,6 +96,36 @@
 					</form>
 					{#if form?.action === 'deadline' && form.goalId === card.id && form.message}
 						<p role="alert" class="text-sm text-destructive">{form.message}</p>
+					{/if}
+				{/if}
+
+				{#if editing === card.id}
+					<form method="POST" action="?/look" use:enhance class="flex flex-col gap-2">
+						<input type="hidden" name="id" value={card.id} />
+						{@render lookPicker(`look-${card.id}`, card.color, card.iconKey)}
+						<button type="submit" class="h-11 rounded-md border px-4 text-sm font-medium">Сохранить цвет и значок</button>
+					</form>
+					<form method="POST" action="?/days" use:enhance class="flex flex-col gap-2">
+						<input type="hidden" name="id" value={card.id} />
+						<fieldset class="flex flex-col gap-2 text-sm">
+							<legend class="mb-1">Учебные дни (задачи разложатся только по ним)</legend>
+							<div class="flex flex-wrap gap-2">
+								{#each WEEKDAYS as day (day.bit)}
+									<label class="flex h-10 min-w-12 cursor-pointer items-center justify-center rounded-md border px-3 has-[:checked]:border-primary has-[:checked]:bg-primary/10 has-[:checked]:text-primary">
+										<input type="checkbox" name="days" value={day.bit} checked={(card.studyDays & day.bit) !== 0} class="sr-only" aria-label={day.name} />
+										{day.short}
+									</label>
+								{/each}
+							</div>
+						</fieldset>
+						<button type="submit" class="h-11 rounded-md border px-4 text-sm font-medium">Сохранить дни и разложить план заново</button>
+					</form>
+					{#if form?.action === 'days' && form.goalId === card.id}
+						{#if 'summary' in form && form.summary}
+							<p class="rounded-md bg-muted p-3 text-sm" data-testid="days-summary">{form.summary}</p>
+						{:else if 'message' in form && form.message}
+							<p role="alert" class="text-sm text-destructive">{form.message}</p>
+						{/if}
 					{/if}
 				{/if}
 
@@ -125,12 +171,40 @@
 						<input type="hidden" name="id" value={card.id} />
 						<button type="submit" class="h-10 rounded-md border px-3 text-sm">Завершить</button>
 					</form>
+					<form method="POST" action="?/archive" use:enhance>
+						<input type="hidden" name="id" value={card.id} />
+						<button type="submit" class="h-10 rounded-md border px-3 text-sm">В архив (пауза)</button>
+					</form>
 				</div>
 			</li>
 		{:else}
-			<li class="rounded-xl border bg-card shadow-sm border-dashed p-6 text-center text-muted-foreground">Пока нет активных целей. Нажми «Добавить цель».</li>
+			<li class="flex flex-col items-center gap-2 rounded-xl border border-dashed bg-card p-6 text-center text-muted-foreground">
+				<Illustration kind="goals" size={120} />
+				Пока нет активных целей. Нажми «Добавить цель».
+			</li>
 		{/each}
 	</ul>
+
+	{#if archived.length > 0}
+		<section class="flex flex-col gap-2" data-testid="archive">
+			<h2 class="text-lg font-semibold">Архив</h2>
+			<p class="text-sm text-muted-foreground">Цели на паузе: их задач нет на главной и в календаре, а прогресс сохранён.</p>
+			<ul class="flex flex-col gap-2">
+				{#each archived as card (card.id)}
+					<li class="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm" data-testid="archived-goal">
+						<span class="min-w-0">{card.icon} {card.title} <span class="text-muted-foreground">({card.percent}%)</span></span>
+						<form method="POST" action="?/restore" use:enhance>
+							<input type="hidden" name="id" value={card.id} />
+							<button type="submit" class="h-10 rounded-md border px-3">Вернуть</button>
+						</form>
+					</li>
+					{#if form?.action === 'restore' && form.goalId === card.id && form.message}
+						<li role="alert" class="text-sm text-destructive">{form.message}</li>
+					{/if}
+				{/each}
+			</ul>
+		</section>
+	{/if}
 
 	{#if finished.length > 0}
 		<section class="flex flex-col gap-2">
@@ -146,3 +220,25 @@
 		</section>
 	{/if}
 </main>
+
+{#snippet lookPicker(id: string, color: string, icon: string)}
+	<fieldset class="flex flex-col gap-2 text-sm">
+		<legend class="mb-1">Цвет и значок</legend>
+		<div class="flex flex-wrap gap-2">
+			{#each GOAL_COLORS as c (c)}
+				<label class="goal-{c} flex size-9 cursor-pointer items-center justify-center rounded-full border-2 border-transparent has-[:checked]:border-foreground" title={GOAL_COLOR_NAMES[c]}>
+					<input type="radio" name="color" value={c} checked={c === color} class="sr-only" aria-label={GOAL_COLOR_NAMES[c]} />
+					<span class="size-6 rounded-full bg-[var(--goal)]"></span>
+				</label>
+			{/each}
+		</div>
+		<div class="flex flex-wrap gap-2">
+			{#each GOAL_ICON_KEYS as k (k)}
+				<label class="flex size-10 cursor-pointer items-center justify-center rounded-md border text-lg has-[:checked]:border-primary has-[:checked]:bg-primary/10" title={GOAL_ICON_NAMES[k]}>
+					<input type="radio" name="icon" value={k} checked={k === icon} class="sr-only" aria-label={GOAL_ICON_NAMES[k]} />
+					{GOAL_ICONS[k]}
+				</label>
+			{/each}
+		</div>
+	</fieldset>
+{/snippet}

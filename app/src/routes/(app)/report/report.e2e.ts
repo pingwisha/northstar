@@ -19,8 +19,15 @@ test('the weekly report shows the real numbers and no AI button to a member', as
 	}).toPass();
 	await expect(page.getByTestId('report-totals')).toContainText('1 из 2');
 	await expect(page.getByTestId('report-goal')).toContainText('Прогресс 50%');
-	await expect(page.getByRole('button', { name: 'Написать итог' })).toHaveCount(0);
-	await expect(page.getByText('только владельцу')).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Написать итог' })).toBeVisible();
+
+	// The copy button puts the same numbers on the clipboard.
+	await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+	await page.getByTestId('copy-report').click();
+	await expect(page.getByRole('status')).toHaveText('Скопировано');
+	const copied = await page.evaluate(() => navigator.clipboard.readText());
+	expect(copied).toContain('Прогресс 50%'.replace('Прогресс', 'прогресс'));
+	expect(copied).toContain('Задач недели сделано: 1 из 2');
 	const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 	expect(overflow).toBeLessThanOrEqual(0);
 });

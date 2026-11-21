@@ -8,6 +8,14 @@
 
 <main class="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8">
 	<h1 class="text-3xl font-semibold">Семья и доступ</h1>
+
+	<section aria-label="Сводка по сайту" class="grid grid-cols-2 gap-3 sm:grid-cols-3" data-testid="site-stats">
+		{#each [[data.stats.users, 'человек на сайте'], [data.stats.newThisWeek, 'новых за неделю'], [data.stats.activeThisWeek, 'были активны за неделю'], [data.stats.goals, 'активных целей'], [data.stats.tasksDoneThisWeek, 'задач сделано за неделю'], [data.stats.aiMembersToday, 'запросов к ИИ от участников сегодня']] as [n, label]}
+			<div class="rounded-xl border bg-card p-4 shadow-sm"><p class="text-2xl font-semibold tabular-nums">{n}</p><p class="text-sm text-muted-foreground">{label}</p></div>
+		{/each}
+	</section>
+	<p class="-mt-3 text-xs text-muted-foreground">Только числа: имена, цели и тексты людей здесь не показываются.</p>
+
 	<p class="text-muted-foreground">
 		Войти на сайт могут только приглашённые. Впиши Google-почту человека, и он сможет войти. Если убрать почту, доступ закроется сразу.
 	</p>

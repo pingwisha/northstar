@@ -27,9 +27,25 @@ test('Enter sends the message and Shift+Enter makes a new line', async ({ page, 
 	await expect(page.getByRole('alert')).toContainText('нет ключа');
 });
 
-test('a member sees that the AI is closed for now', async ({ page, context }) => {
+test('a member has the chat too, and no family page', async ({ page, context }) => {
 	await signInAs(context, E2E.goals);
 	await page.goto('/chat');
-	await expect(page.getByTestId('chat-closed')).toBeVisible();
-	await expect(page.getByRole('link', { name: 'Чат с ИИ' })).toHaveCount(0);
+	await expect(page.getByRole('heading', { name: 'Чат с ИИ' })).toBeVisible();
+	await expect(page.getByTestId('quick')).toBeVisible();
+	await expect(page.getByRole('link', { name: 'Семья и доступ' })).toHaveCount(0);
+});
+
+test('quick commands are offered and send their question', async ({ page, context }) => {
+	await signInAs(context, E2E.owner);
+	await page.goto('/chat');
+	const quick = page.getByTestId('quick');
+	await expect(quick.getByRole('button')).toHaveCount(4);
+	// "Explain simpler" needs an earlier answer, so it is not offered in an empty chat.
+	await expect(quick.getByRole('button', { name: 'Объясни проще' })).toHaveCount(0);
+	await expect(async () => {
+		await quick.getByRole('button', { name: 'Проверь меня' }).click();
+		await expect(page.getByRole('alert')).toContainText('нет ключа', { timeout: 3000 });
+	}).toPass({ timeout: 20000 });
+	const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+	expect(overflow).toBeLessThanOrEqual(0);
 });

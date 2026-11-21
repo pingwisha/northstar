@@ -5,6 +5,14 @@
 	let { data, form } = $props();
 	let sending = $state(false);
 	let text = $state('');
+	// Ready-made questions; the text is what is sent to the AI.
+	const QUICK = [
+		{ label: 'Что делать сегодня?', text: 'Что мне делать сегодня?' },
+		{ label: 'План на неделю', text: 'Дай план на ближайшую неделю по моим задачам: по дням, коротко.' },
+		{ label: 'Проверь меня', text: 'Задай мне три коротких вопроса, чтобы проверить, что я усвоила ближайшую задачу. По одному, жди моего ответа.' },
+		{ label: 'Объясни проще', text: 'Объясни свой последний ответ проще, короткими фразами и на примере.', needsHistory: true },
+		{ label: 'Итог недели', text: 'Подведи итог моей недели по цифрам из моих целей и скажи, на что обратить внимание.' }
+	] as { label: string; text: string; needsHistory?: boolean }[];
 
 	// Enter sends the message; Shift and Enter make a new line. Not while a word is being composed.
 	function sendOnEnter(e: KeyboardEvent) {
@@ -31,7 +39,7 @@
 	</div>
 
 	{#if !data.canChat}
-		<p class="rounded-xl border bg-card shadow-sm p-6 text-muted-foreground" data-testid="chat-closed">ИИ пока доступен только владельцу сайта. Для остальных он появится позже.</p>
+		<p class="rounded-xl border bg-card shadow-sm p-6 text-muted-foreground" data-testid="chat-closed">ИИ сейчас недоступен.</p>
 	{:else}
 		<ul class="flex flex-col gap-3" data-testid="messages">
 			{#each data.messages as m (m.id)}
@@ -44,12 +52,14 @@
 			{/if}
 		</ul>
 
-		{#if data.messages.length === 0}
-			<form method="POST" action="?/send" use:enhance={() => { sending = true; return async ({ update }) => { await update(); sending = false; }; }}>
-				<input type="hidden" name="text" value="Что мне делать сегодня?" />
-				<button type="submit" disabled={sending} class="h-11 rounded-md border px-4 text-sm">Что мне делать сегодня?</button>
-			</form>
-		{/if}
+		<div class="flex flex-wrap gap-2" role="group" aria-label="Быстрые команды" data-testid="quick">
+			{#each QUICK.filter((q) => !q.needsHistory || data.messages.length > 0) as q (q.label)}
+				<form method="POST" action="?/send" use:enhance={() => { sending = true; return async ({ update }) => { await update(); sending = false; }; }}>
+					<input type="hidden" name="text" value={q.text} />
+					<button type="submit" disabled={sending} class="h-10 rounded-full border px-4 text-sm transition-colors hover:border-primary hover:text-primary disabled:opacity-60">{q.label}</button>
+				</form>
+			{/each}
+		</div>
 
 		<form
 			method="POST"

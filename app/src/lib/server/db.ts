@@ -5,6 +5,7 @@
 
 import type { ScheduledStage } from '$lib/plan';
 import type { NewTrial, Trial } from '$lib/trials';
+import type { Mistake, NewMistake } from '$lib/mistakes';
 
 export type Role = 'owner' | 'member';
 
@@ -31,6 +32,9 @@ export interface GoalRow {
 	start_date: string;
 	deadline: string;
 	status: GoalStatus;
+	study_days: number;
+	color: string;
+	icon: string;
 	created_at: string;
 }
 
@@ -84,6 +88,31 @@ export async function countUsersSince(db: D1Database, day: string): Promise<numb
 	return (await db.prepare('SELECT COUNT(*) AS n FROM users WHERE created_at >= ?').bind(day).first<{ n: number }>())!.n;
 }
 
+// Site-wide totals for the owner's page. Counts only: no names, no goals, no text of anyone.
+export interface SiteStats {
+	users: number;
+	newThisWeek: number;
+	activeThisWeek: number;
+	goals: number;
+	tasksDoneThisWeek: number;
+	aiMembersToday: number;
+}
+
+export async function siteStats(db: D1Database, now: Date = new Date()): Promise<SiteStats> {
+	const iso = (d: Date) => d.toISOString();
+	const weekAgo = iso(new Date(now.getTime() - 7 * 86_400_000));
+	const day = now.toISOString().slice(0, 10);
+	const one = async (sql: string, ...binds: unknown[]) => (await db.prepare(sql).bind(...binds).first<{ n: number }>())?.n ?? 0;
+	return {
+		users: await one('SELECT COUNT(*) AS n FROM users'),
+		newThisWeek: await one('SELECT COUNT(*) AS n FROM users WHERE created_at >= ?', weekAgo),
+		activeThisWeek: await one('SELECT COUNT(DISTINCT user_id) AS n FROM tasks WHERE completed_at >= ?', weekAgo),
+		goals: await one("SELECT COUNT(*) AS n FROM goals WHERE status = 'active'"),
+		tasksDoneThisWeek: await one('SELECT COUNT(*) AS n FROM tasks WHERE completed_at >= ?', weekAgo),
+		aiMembersToday: await one("SELECT COALESCE(SUM(u.count), 0) AS n FROM ai_usage u JOIN users x ON x.id = u.user_id WHERE u.day = ? AND x.role != 'owner'", day)
+	};
+}
+
 export async function isInvited(db: D1Database, email: string): Promise<boolean> {
 	return (await db.prepare('SELECT 1 AS ok FROM invites WHERE email = ?').bind(normalize(email)).first()) !== null;
 }
@@ -116,11 +145,12 @@ export function scoped(db: D1Database, userId: string) {
 			return {
 				exportedAt: new Date().toISOString(),
 				email: user?.email ?? null,
-				goals: await all('SELECT id, title, description, start_date, deadline, status, created_at FROM goals WHERE user_id = ? ORDER BY created_at, rowid'),
+				goals: await all('SELECT id, title, description, start_date, deadline, status, study_days, color, icon, created_at FROM goals WHERE user_id = ? ORDER BY created_at, rowid'),
 				stages: await all('SELECT id, goal_id, position, title, due_date FROM stages WHERE user_id = ? ORDER BY goal_id, position'),
 				tasks: await all('SELECT id, goal_id, title, planned_for, weight, completed_at, note, created_at FROM tasks WHERE user_id = ? ORDER BY planned_for, rowid'),
 				materials: await all('SELECT id, task_id, kind, title, url, source, own FROM materials WHERE user_id = ? ORDER BY rowid'),
 				trials: await all('SELECT id, goal_id, taken_on, title, score, max_score, weak_topics FROM trials WHERE user_id = ? ORDER BY taken_on, rowid'),
+				mistakes: await all('SELECT id, goal_id, topic, note, created_at, fixed_at FROM mistakes WHERE user_id = ? ORDER BY created_at, rowid'),
 				chatMessages: await all('SELECT chat_id, role, content, created_at FROM chat_messages WHERE user_id = ? ORDER BY created_at, rowid')
 			};
 		},
@@ -220,20 +250,65 @@ export function scoped(db: D1Database, userId: string) {
 			return (r.meta.changes ?? 0) > 0;
 		},
 
+		async countMistakes(): Promise<number> {
+			return (await db.prepare('SELECT COUNT(*) AS n FROM mistakes WHERE user_id = ?').bind(userId).first<{ n: number }>())!.n;
+		},
+
+		async listMistakes(): Promise<Mistake[]> {
+			const rows = (
+				await db
+					.prepare('SELECT id, goal_id, topic, note, created_at, fixed_at FROM mistakes WHERE user_id = ? ORDER BY created_at DESC, rowid DESC')
+					.bind(userId)
+					.all<{ id: string; goal_id: string; topic: string; note: string | null; created_at: string; fixed_at: string | null }>()
+			).results;
+			return rows.map((r) => ({ id: r.id, goalId: r.goal_id, topic: r.topic, note: r.note, createdAt: r.created_at, fixedAt: r.fixed_at }));
+		},
+
+		// A mistake goes only to one of the person's active goals.
+		async addMistake(goalId: string, m: NewMistake): Promise<boolean> {
+			const goal = await db.prepare("SELECT id FROM goals WHERE id = ? AND user_id = ? AND status = 'active'").bind(goalId, userId).first();
+			if (!goal) return false;
+			await db.prepare('INSERT INTO mistakes (id, user_id, goal_id, topic, note) VALUES (?, ?, ?, ?, ?)').bind(crypto.randomUUID(), userId, goalId, m.topic, m.note).run();
+			return true;
+		},
+
+		async setMistakeFixed(id: string, fixed: boolean): Promise<boolean> {
+			const r = await db
+				.prepare("UPDATE mistakes SET fixed_at = CASE WHEN ?1 THEN COALESCE(fixed_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) ELSE NULL END WHERE id = ?2 AND user_id = ?3")
+				.bind(fixed ? 1 : 0, id, userId)
+				.run();
+			return (r.meta.changes ?? 0) > 0;
+		},
+
+		async deleteMistake(id: string): Promise<boolean> {
+			const r = await db.prepare('DELETE FROM mistakes WHERE id = ? AND user_id = ?').bind(id, userId).run();
+			return (r.meta.changes ?? 0) > 0;
+		},
+
 		async countActiveGoals(): Promise<number> {
 			return (await db.prepare("SELECT COUNT(*) AS n FROM goals WHERE user_id = ? AND status = 'active'").bind(userId).first<{ n: number }>())!.n;
 		},
 
-		async addGoal(goal: { title: string; description: string | null; deadline: string }, today: string): Promise<string> {
+		async addGoal(goal: { title: string; description: string | null; deadline: string; studyDays?: number; color?: string; icon?: string }, today: string): Promise<string> {
 			const id = crypto.randomUUID();
 			await db
-				.prepare('INSERT INTO goals (id, user_id, title, description, start_date, deadline) VALUES (?, ?, ?, ?, ?, ?)')
-				.bind(id, userId, goal.title, goal.description, today, goal.deadline)
+				.prepare('INSERT INTO goals (id, user_id, title, description, start_date, deadline, study_days, color, icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+				.bind(id, userId, goal.title, goal.description, today, goal.deadline, goal.studyDays ?? 127, goal.color ?? 'blue', goal.icon ?? 'target')
 				.run();
 			return id;
 		},
 
 		// The user id is part of every write, so one person cannot touch another's goal.
+		async setLook(goalId: string, color: string, icon: string): Promise<boolean> {
+			const r = await db.prepare("UPDATE goals SET color = ?, icon = ? WHERE id = ? AND user_id = ? AND status != 'done'").bind(color, icon, goalId, userId).run();
+			return r.meta.changes > 0;
+		},
+
+		async setStudyDays(goalId: string, studyDays: number): Promise<boolean> {
+			const r = await db.prepare("UPDATE goals SET study_days = ? WHERE id = ? AND user_id = ? AND status = 'active'").bind(studyDays, goalId, userId).run();
+			return r.meta.changes > 0;
+		},
+
 		async setDeadline(goalId: string, deadline: string): Promise<boolean> {
 			const r = await db.prepare("UPDATE goals SET deadline = ? WHERE id = ? AND user_id = ? AND status = 'active'").bind(deadline, goalId, userId).run();
 			return r.meta.changes > 0;

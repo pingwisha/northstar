@@ -22,5 +22,8 @@
 	<h2 class="text-xl font-semibold">Изменения</h2>
 	<p>Условия могут меняться вместе с сайтом. Актуальная версия всегда на этой странице.</p>
 
+	<h2 class="text-xl font-semibold">Связаться</h2>
+	<p>Вопросы, просьбы и сообщения об ошибках: <a href="mailto:northstart.help@gmail.com" class="text-primary underline underline-offset-2">northstart.help@gmail.com</a></p>
+
 	<p><a href="/login" class="text-primary underline underline-offset-2">Ко входу</a></p>
 </main>

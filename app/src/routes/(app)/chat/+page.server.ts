@@ -15,6 +15,7 @@ const MESSAGES = {
 	not_available: 'ИИ пока доступен только владельцу сайта.',
 	not_configured: 'ИИ ещё не подключён: нет ключа.',
 	limit_reached: 'На сегодня лимит запросов к ИИ исчерпан. Попробуй завтра.',
+	service_busy: 'Сегодня ИИ слишком загружен. Попробуй завтра.',
 	ai_unavailable: 'ИИ сейчас не отвечает. Попробуй через несколько минут.',
 	invalid_messages: 'Сообщение не получилось отправить. Попробуй короче.'
 } as const;
@@ -28,7 +29,7 @@ async function mine(locals: App.Locals, platform: App.Platform | undefined) {
 export const load: PageServerLoad = async ({ locals, platform }) => {
 	const { me } = await mine(locals, platform);
 	const chatId = await me.currentChat();
-	return { canChat: locals.role === 'owner', messages: chatId ? await me.chatMessages(chatId) : [] };
+	return { canChat: true, messages: chatId ? await me.chatMessages(chatId) : [] };
 };
 
 export const actions: Actions = {
@@ -44,7 +45,7 @@ export const actions: Actions = {
 		const [goals, tasks, materials] = await Promise.all([me.listGoals(), me.listGoalTasks(), me.listMaterials()]);
 		const messages: ChatMessage[] = [systemMessage(buildChatContext(goals, tasks, today, materials)), ...history, { role: 'user', content: question }];
 
-		const result = await askAi(env, { userId: locals.userId!, role: locals.role ?? 'member' }, messages, { temperature: 0.5, maxTokens: 700 });
+		const result = await askAi(env, { userId: locals.userId!, role: locals.role ?? 'member' }, messages, { temperature: 0.5, maxTokens: 700, allowMember: true });
 		if (!result.ok) return fail(result.error === 'not_available' ? 403 : 502, { message: MESSAGES[result.error], text: question });
 
 		// Only addresses from the person's own materials may reach the page: the AI cannot add its own.

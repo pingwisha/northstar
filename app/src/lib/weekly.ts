@@ -94,3 +94,20 @@ export function numbersAreKnown(answer: string, context: string): boolean {
 	const known = new Set(context.match(/\d+/g) ?? []);
 	return (answer.match(/\d+/g) ?? []).every((n) => known.has(n));
 }
+
+// The report as plain text, to paste into a message. Built from the same numbers as the page.
+export function reportText(w: Weekly): string {
+	const lines = [`Недельный отчёт, ${formatDate(w.from)} – ${formatDate(w.to)}`, ''];
+	if (w.goals.length === 0) return `${lines[0]}\n\nАктивных целей нет.`;
+	lines.push(`Сделано за неделю: ${w.doneInWeek}`, `Задач недели сделано: ${w.plannedDone} из ${w.planned}`, `Просрочено: ${w.overdue}`, '');
+	for (const g of w.goals) {
+		lines.push(`${g.title}: прогресс ${g.percent}%, ${g.paceLabel}. Срок ${formatDate(g.deadline)}, ${g.daysLabel}.`);
+		lines.push(`  За неделю сделано: ${g.doneInWeek}. Просрочено: ${g.overdue}.`);
+	}
+	if (w.trials.length) {
+		lines.push('', 'Пробники:');
+		for (const t of w.trials) lines.push(`  ${formatDate(t.takenOn)}: ${t.title}, ${t.percent}%`);
+	}
+	if (w.weak.length) lines.push('', `Чаще всего слабые темы: ${w.weak.map((x) => x.topic).join(', ')}.`);
+	return lines.join('\n');
+}

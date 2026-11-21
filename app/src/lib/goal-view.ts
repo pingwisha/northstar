@@ -1,4 +1,5 @@
 // What a goal card shows, built from the stored rows. Pure: no database, no clock.
+import { colorOf, iconOf, isGoalIcon } from './goal-look';
 import { daysLabel, daysUntil, groupPercent, overallPercent, pace, type Pace, type TaskInput } from './progress';
 
 export interface GoalData {
@@ -7,6 +8,9 @@ export interface GoalData {
 	description: string | null;
 	deadline: string;
 	status: 'active' | 'done' | 'archived';
+	study_days?: number;
+	color?: string;
+	icon?: string;
 }
 
 export interface TaskData {
@@ -23,6 +27,10 @@ export interface GoalCard {
 	description: string | null;
 	deadline: string;
 	status: GoalData['status'];
+	studyDays: number;
+	color: string;
+	icon: string;
+	iconKey: string;
 	percent: number;
 	pace: Pace;
 	daysLeft: number;
@@ -49,6 +57,10 @@ export function buildCards(goals: GoalData[], tasks: TaskData[], today: string):
 			description: g.description,
 			deadline: g.deadline,
 			status: g.status,
+			studyDays: g.study_days ?? 127,
+			color: colorOf(g.color),
+			icon: iconOf(g.icon),
+			iconKey: isGoalIcon(g.icon) ? g.icon : 'target',
 			percent: groupPercent(inputs),
 			pace: pace(inputs, today),
 			daysLeft,

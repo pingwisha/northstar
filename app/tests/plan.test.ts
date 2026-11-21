@@ -104,14 +104,18 @@ describe('generatePlan', () => {
 		expect(r.stages[0].tasks[0].materials.length).toBeGreaterThan(0);
 	});
 
+	it('builds a plan for a member too', async () => {
+		const r = await generatePlan(env(), { userId: 'm', role: 'member' }, goal, '2026-11-18', { fetch: web(JSON.stringify(aiPlan), (stage) => JSON.stringify(materialsFor[stage])) as unknown as typeof fetch });
+		expect(r.ok).toBe(true);
+	});
+
 	it('gives up after two bad answers', async () => {
 		const r = await generatePlan(env(), owner, goal, '2026-11-18', { fetch: web('не json') as unknown as typeof fetch });
 		expect(r).toEqual({ ok: false, error: 'bad_answer' });
 	});
 
-	it('refuses a member and a passed deadline without asking the AI', async () => {
+	it('refuses a passed deadline without asking the AI', async () => {
 		const send = web();
-		expect(await generatePlan(env(), { userId: 'm', role: 'member' }, goal, '2026-11-18', { fetch: send as unknown as typeof fetch })).toEqual({ ok: false, error: 'not_available' });
 		expect(await generatePlan(env(), owner, goal, '2027-01-01', { fetch: send as unknown as typeof fetch })).toEqual({ ok: false, error: 'deadline_passed' });
 		expect(send).not.toHaveBeenCalled();
 	});
@@ -169,10 +173,23 @@ describe('the plan action', () => {
 		expect((await scoped(db, 'o').listGoalTasks()).length).toBe(3);
 	});
 
-	it('tells a member the AI is not theirs yet and stores nothing', async () => {
+	it('builds and saves a plan for a member, within their own limit', async () => {
 		vi.stubGlobal('fetch', web());
 		const id = await scoped(db, 'm').addGoal({ ...goal, deadline: '2030-01-01' }, '2026-11-18');
-		expect(await run('m', 'member', id)).toMatchObject({ status: 403 });
+		expect(await run('m', 'member', id)).toMatchObject({ ok: true });
+		expect((await scoped(db, 'm').listGoalTasks()).length).toBe(3);
+		expect(await usedToday(db, 'm')).toBeGreaterThan(0);
+	});
+
+	it('tells a member who used the daily limit to wait, and stores nothing', async () => {
+		vi.stubGlobal('fetch', web());
+		const id = await scoped(db, 'm').addGoal({ ...goal, deadline: '2030-01-01' }, '2026-11-18');
+		const tight = () => ({ ...env(), MEMBER_DAILY_LIMIT: '1' });
+		await db.prepare('INSERT INTO ai_usage (user_id, day, count) VALUES (?, ?, 1)').bind('m', new Date().toISOString().slice(0, 10)).run();
+		const body = new FormData();
+		body.set('id', id);
+		const call = () => actions.plan!({ request: new Request('http://localhost/goals', { method: 'POST', body }), locals: { userId: 'm', role: 'member' }, platform: { env: tight() } } as unknown as Event);
+		expect(await call()).toMatchObject({ status: 502 });
 		expect(await scoped(db, 'm').listGoalTasks()).toHaveLength(0);
 	});
 

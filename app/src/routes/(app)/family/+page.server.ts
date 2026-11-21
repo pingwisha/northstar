@@ -1,5 +1,5 @@
 import { error, fail } from '@sveltejs/kit';
-import { addInvite, listInvites, removeInvite } from '$lib/server/db';
+import { addInvite, listInvites, removeInvite, siteStats } from '$lib/server/db';
 import { appEnv } from '$lib/server/env';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -15,7 +15,7 @@ async function ownerDb(locals: App.Locals, platform: App.Platform | undefined): 
 
 export const load: PageServerLoad = async ({ locals, platform }) => {
 	const db = await ownerDb(locals, platform);
-	return { invites: await listInvites(db) };
+	return { invites: await listInvites(db), stats: await siteStats(db) };
 };
 
 export const actions: Actions = {

@@ -3,12 +3,23 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="manifest" href="/manifest.webmanifest" />
+		<link rel="apple-touch-icon" href="/icon-180.png" />
+		<meta name="theme-color" content="#2f5fb3" />
+		<meta name="google-site-verification" content="3qAKZ7kd4uJcni6Qi2Aq8Quu8T0Z4wgXRoHS-kLUwys" />
 		<script>
 			// Applies the saved theme before the first paint, so a dark screen never flashes white.
 			try {
 				var t = localStorage.getItem('theme');
 				var dark = t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
 				document.documentElement.classList.toggle('dark', dark);
+			} catch (e) {}
+			// The saved accent colour and text size, also before the first paint.
+			try {
+				var accent = localStorage.getItem('accent');
+				var size = localStorage.getItem('size');
+				if (/^(violet|green|rose|orange|teal)$/.test(accent || '')) document.documentElement.setAttribute('data-accent', accent);
+				if (/^(large|xlarge)$/.test(size || '')) document.documentElement.setAttribute('data-size', size);
 			} catch (e) {}
 		</script>
 		%sveltekit.head%

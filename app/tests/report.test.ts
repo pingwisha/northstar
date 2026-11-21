@@ -28,10 +28,10 @@ async function withWeek(userId: string) {
 }
 
 describe('weekly report', () => {
-	it('shows the real numbers to a member, without the AI', async () => {
+	it('shows the real numbers to a member, and offers the AI comment', async () => {
 		await withWeek('m');
 		const data = (await load({ locals: { userId: 'm', role: 'member' }, platform: platform() } as never)) as { weekly: { doneInWeek: number; planned: number; goals: { percent: number }[] }; canAi: boolean };
-		expect(data.canAi).toBe(false);
+		expect(data.canAi).toBe(true);
 		expect(data.weekly).toMatchObject({ doneInWeek: 1, planned: 2 });
 		expect(data.weekly.goals[0].percent).toBe(50);
 	});
@@ -58,11 +58,9 @@ describe('weekly report', () => {
 		expect(await comment('o', 'owner')).toMatchObject({ status: 502 });
 	});
 
-	it('does not call the AI for a member', async () => {
+	it('gives a member a comment too, on their own numbers', async () => {
 		await withWeek('m');
-		const fetchMock = reply('что-то');
-		vi.stubGlobal('fetch', fetchMock);
-		expect(await comment('m', 'member')).toMatchObject({ status: 403 });
-		expect(fetchMock).not.toHaveBeenCalled();
+		vi.stubGlobal('fetch', reply('Сделана 1 задача из 2.'));
+		expect(await comment('m', 'member')).toMatchObject({ ok: true });
 	});
 });

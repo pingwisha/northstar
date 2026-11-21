@@ -11,6 +11,7 @@ const MESSAGES = {
 	not_available: 'ИИ пока доступен только владельцу сайта.',
 	not_configured: 'ИИ ещё не подключён: нет ключа.',
 	limit_reached: 'На сегодня лимит запросов к ИИ исчерпан. Попробуй завтра.',
+	service_busy: 'Сегодня ИИ слишком загружен. Попробуй завтра.',
 	ai_unavailable: 'ИИ сейчас не отвечает. Попробуй через несколько минут.',
 	invalid_messages: 'Не получилось отправить запрос. Попробуй позже.'
 } as const;
@@ -25,7 +26,7 @@ async function report(locals: App.Locals, platform: App.Platform | undefined) {
 
 export const load: PageServerLoad = async ({ locals, platform }) => {
 	const { weekly } = await report(locals, platform);
-	return { weekly, canAi: locals.role === 'owner' };
+	return { weekly, canAi: true };
 };
 
 export const actions: Actions = {
@@ -34,7 +35,7 @@ export const actions: Actions = {
 		const { env, weekly } = await report(locals, platform);
 		if (weekly.goals.length === 0) return fail(400, { message: 'Нет активных целей, комментировать нечего.' });
 		const context = weeklyContext(weekly);
-		const result = await askAi(env, { userId: locals.userId!, role: locals.role ?? 'member' }, [systemMessage(context), { role: 'user', content: 'Напиши итог недели по отчёту.' }], { temperature: 0.4, maxTokens: 500 });
+		const result = await askAi(env, { userId: locals.userId!, role: locals.role ?? 'member' }, [systemMessage(context), { role: 'user', content: 'Напиши итог недели по отчёту.' }], { temperature: 0.4, maxTokens: 500, allowMember: true });
 		if (!result.ok) return fail(result.error === 'not_available' ? 403 : 502, { message: MESSAGES[result.error] });
 		const comment = plainText(result.content);
 		if (!comment) return fail(502, { message: 'ИИ ничего не написал. Попробуй ещё раз.' });

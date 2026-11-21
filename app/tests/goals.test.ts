@@ -112,4 +112,63 @@ describe('«Я отстаю»', () => {
 		const rows = await scoped(db, 'a').listGoalTasks();
 		expect(rows.find((t) => t.id === 'a-' + id + '-0')!.planned_for).toBe('2026-01-02');
 	});
+
+	it('archives a goal, restores it, and keeps strangers and the cap out', async () => {
+		const id = await scoped(db, 'a').addGoal(goal, '2026-11-18');
+		const status = async () => (await scoped(db, 'a').listGoals()).find((g) => g.id === id)!.status;
+
+		expect((await actions.archive!(as('b', post({ id })))) as { status?: number }).toMatchObject({ status: 404 });
+		expect(await status()).toBe('active');
+
+		await actions.archive!(as('a', post({ id })));
+		expect(await status()).toBe('archived');
+		expect(await scoped(db, 'a').countActiveGoals()).toBe(0);
+
+		expect((await actions.restore!(as('b', post({ id })))) as { status?: number }).toMatchObject({ status: 404 });
+		expect(await status()).toBe('archived');
+
+		await actions.restore!(as('a', post({ id })));
+		expect(await status()).toBe('active');
+
+		// A finished goal is not an archived one: it cannot be "restored".
+		await scoped(db, 'a').setGoalStatus(id, 'done');
+		expect((await actions.restore!(as('a', post({ id })))) as { status?: number }).toMatchObject({ status: 404 });
+
+		// Restoring past the limit of active goals is refused.
+		await scoped(db, 'a').setGoalStatus(id, 'archived');
+		for (let i = 0; i < MAX_ACTIVE_GOALS; i++) await scoped(db, 'a').addGoal(goal, '2026-11-18');
+		expect((await actions.restore!(as('a', post({ id })))) as { status?: number }).toMatchObject({ status: 400 });
+		expect(await status()).toBe('archived');
+	});
+
+	it('saves study days and lays open tasks out on them, for the owner of the goal only', async () => {
+		const me = scoped(db, 'a');
+		const id = await me.addGoal({ ...goal, deadline: '2030-05-18' }, '2026-11-18');
+		for (let i = 0; i < 6; i++) await db.prepare("INSERT INTO tasks (id, user_id, goal_id, title, planned_for) VALUES (?, 'a', ?, 'T', '2026-11-18')").bind(`t${i}`, id).run();
+
+		expect((await actions.days!(as('b', post({ id, days: '1' })))) as { status?: number }).toMatchObject({ status: 404 });
+		expect((await actions.days!(as('a', post({ id })))) as { status?: number }).toMatchObject({ status: 400 });
+
+		await actions.days!(as('a', post({ id, days: '1' })));
+		expect((await me.listGoals())[0].study_days).toBe(1);
+		const dates = (await me.listGoalTasks()).map((t) => t.planned_for);
+		for (const d of dates) expect(new Date(`${d}T00:00:00Z`).getUTCDay()).toBe(1);
+	});
+
+	it('stores a goal\'s colour and icon from the list only, and only for its owner', async () => {
+		const me = scoped(db, 'a');
+		await actions.add!(as('a', post({ title: 'Выучить сербский', deadline: '2030-05-18', color: 'rose', icon: 'books' })));
+		await actions.add!(as('a', post({ title: 'Вторая', deadline: '2030-05-18', color: 'red;x', icon: '<b>' })));
+		const [first, second] = await me.listGoals();
+		expect([first.color, first.icon]).toEqual(['rose', 'books']);
+		// A bad value falls back: the colour to the next in the row, the icon to the default.
+		expect([second.color, second.icon]).toEqual(['violet', 'target']);
+
+		expect((await actions.look!(as('b', post({ id: first.id, color: 'green', icon: 'run' })))) as { status?: number }).toMatchObject({ status: 404 });
+		await actions.look!(as('a', post({ id: first.id, color: 'green', icon: 'run' })));
+		await actions.look!(as('a', post({ id: second.id, color: 'nonsense' })));
+		const after = await me.listGoals();
+		expect([after[0].color, after[0].icon]).toEqual(['green', 'run']);
+		expect([after[1].color, after[1].icon]).toEqual(['violet', 'target']);
+	});
 });

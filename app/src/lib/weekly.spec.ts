@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GoalData, TaskData } from './goal-view';
 import type { Trial } from './trials';
-import { buildWeekly, numbersAreKnown, weeklyContext } from './weekly';
+import { buildWeekly, numbersAreKnown, reportText, weeklyContext } from './weekly';
 
 const goal: GoalData = { id: 'g', title: 'Сдать ОГЭ', description: null, deadline: '2026-12-31', status: 'active' };
 const task = (planned_for: string, completed_at: string | null): TaskData => ({ goal_id: 'g', title: 't', planned_for, weight: 1, completed_at });
@@ -60,5 +60,19 @@ describe('numbersAreKnown', () => {
 	});
 	it('says so when there are no goals', () => {
 		expect(weeklyContext(buildWeekly([], [], [], today))).toContain('Активных целей нет');
+	});
+});
+
+describe('reportText', () => {
+	it('puts the same numbers into a plain text', () => {
+		const w = buildWeekly([goal], [task('2026-11-20', '2026-11-20T08:00:00Z'), task('2026-11-19', null)], [], today);
+		const text = reportText(w);
+		expect(text).toContain('Недельный отчёт, 14.11.2026 – 20.11.2026');
+		expect(text).toContain(`Сделано за неделю: ${w.doneInWeek}`);
+		expect(text).toContain('Сдать ОГЭ: прогресс');
+		expect(text).toContain('Просрочено: 1');
+	});
+	it('says so when there are no goals', () => {
+		expect(reportText(buildWeekly([], [], [], today))).toContain('Активных целей нет');
 	});
 });

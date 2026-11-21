@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { formatDate } from '$lib/goals';
+	import Illustration from '$lib/components/Illustration.svelte';
 
 	let { data, form } = $props();
 	let adding = $state(false);
@@ -74,7 +75,10 @@
 		<section class="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm" aria-label={`Пробники: ${b.goalTitle}`} data-testid="trial-block">
 			<h2 class="text-lg font-medium">{b.goalTitle}</h2>
 			{#if b.summary.points.length === 0}
-				<p class="text-sm text-muted-foreground">Результатов пока нет.</p>
+				<div class="flex items-center gap-4">
+					<Illustration kind="chart" size={90} />
+					<p class="text-sm text-muted-foreground">Результатов пока нет. Запиши первый пробник, и здесь появится рост.</p>
+				</div>
 			{:else}
 				<p class="text-sm" data-testid="trial-summary">
 					Последний: <strong>{b.summary.last}%</strong>. Лучший: <strong>{b.summary.best}%</strong>.

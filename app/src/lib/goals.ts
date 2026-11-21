@@ -45,10 +45,34 @@ export function parseDeadline(raw: unknown, today: string): Parsed<string> {
 	return { ok: true, value };
 }
 
+// Study weekdays as bits: Monday = 1 ... Sunday = 64.
+export const ALL_DAYS = 127;
+export const WEEKDAYS = [
+	{ bit: 1, short: 'Пн', name: 'Понедельник' },
+	{ bit: 2, short: 'Вт', name: 'Вторник' },
+	{ bit: 4, short: 'Ср', name: 'Среда' },
+	{ bit: 8, short: 'Чт', name: 'Четверг' },
+	{ bit: 16, short: 'Пт', name: 'Пятница' },
+	{ bit: 32, short: 'Сб', name: 'Суббота' },
+	{ bit: 64, short: 'Вс', name: 'Воскресенье' }
+] as const;
+export const isValidStudyDays = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= ALL_DAYS;
+
+// The weekday boxes of a form (each sends its bit) -> one number. No box ticked is a mistake.
+export function parseStudyDays(values: unknown[]): Parsed<number> {
+	let bits = 0;
+	for (const v of values) {
+		const n = Number(v);
+		if (WEEKDAYS.some((d) => d.bit === n)) bits |= n;
+	}
+	return bits === 0 ? { ok: false, message: 'Выбери хотя бы один учебный день.' } : { ok: true, value: bits };
+}
+
 export interface NewGoal {
 	title: string;
 	description: string | null;
 	deadline: string;
+	studyDays?: number;
 }
 
 export function parseNewGoal(raw: { title?: unknown; description?: unknown; deadline?: unknown }, today: string): Parsed<NewGoal> {

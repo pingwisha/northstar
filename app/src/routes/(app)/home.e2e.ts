@@ -24,10 +24,15 @@ test('checking a task changes the percent at once', async ({ page, context }) =>
 	await expect(page.getByRole('img', { name: /Общий прогресс: 0%/ })).toBeVisible();
 	await expect(page.getByTestId('task')).toHaveCount(2);
 	await expect(page.getByTestId('nearest')).toContainText('Выучить 100 слов');
+	await expect(page.getByTestId('streak')).toContainText('отметь задачу');
 
 	await page.getByRole('checkbox', { name: 'Отметить: Первые десять слов' }).click();
 	await expect(page.getByRole('img', { name: /Общий прогресс: 50%/ })).toBeVisible();
 	await expect(page.getByRole('checkbox', { name: 'Снять отметку: Первые десять слов' })).toBeVisible();
+	await expect(page.getByTestId('streak')).toContainText('Серия: 1 день подряд');
+	await expect(page.getByTestId('tile-week')).toHaveText('1');
+	await expect(page.getByTestId('week-chart')).toHaveAttribute('aria-label', /Задач сделано по дням/);
+	await expect(page.getByTestId('goal-chip')).toContainText('Выучить 100 слов');
 
 	const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 	expect(overflow).toBeLessThanOrEqual(0);

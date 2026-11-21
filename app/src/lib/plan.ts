@@ -1,7 +1,7 @@
 // Turning a goal into stages and dated tasks. The AI proposes the content and the order;
 // the dates come from code, so every task is guaranteed to fall before the deadline.
 import { daysUntil } from './progress';
-import { MAX_TITLE } from './goals';
+import { ALL_DAYS, MAX_TITLE, isValidStudyDays } from './goals';
 import { plainText } from './ai-text';
 
 export const MAX_STAGES = 8;
@@ -169,7 +169,7 @@ const addDays = (iso: string, n: number): string => new Date(Date.parse(`${iso}T
 // Dates for a row of tasks, one per weight, spread from today to the deadline. A heavier
 // task takes more room before the next one. With a week or more to go, the last day is
 // left free as a buffer.
-export function spreadDates(weights: number[], today: string, deadline: string): string[] {
+export function spreadDates(weights: number[], today: string, deadline: string, studyDays: number = ALL_DAYS): string[] {
 	const days = daysUntil(today, deadline);
 	const span = Math.max(1, days >= 7 ? days : days + 1);
 	const totalWeight = weights.reduce((sum, w) => sum + w, 0);
@@ -177,12 +177,24 @@ export function spreadDates(weights: number[], today: string, deadline: string):
 	return weights.map((w) => {
 		const offset = Math.min(span - 1, Math.floor((before / totalWeight) * span));
 		before += w;
-		return addDays(today, offset);
+		return snapToStudyDay(addDays(today, offset), today, deadline, studyDays);
 	});
 }
 
-export function schedulePlan(stages: PlanStage[], today: string, deadline: string): ScheduledStage[] {
-	const dates = spreadDates(stages.flatMap((s) => s.tasks.map((t) => t.weight)), today, deadline);
+// Bit of the weekday of an ISO date: Monday = 1 ... Sunday = 64.
+const dayBit = (iso: string): number => 1 << ((new Date(`${iso}T00:00:00Z`).getUTCDay() + 6) % 7);
+
+// A day the person does not study on moves to the next study day; past the deadline it moves
+// back to the last one. With no study day between today and the deadline the date stays.
+export function snapToStudyDay(date: string, today: string, deadline: string, studyDays: number): string {
+	if (!isValidStudyDays(studyDays) || studyDays === ALL_DAYS) return date;
+	for (let d = date; d <= deadline; d = addDays(d, 1)) if (studyDays & dayBit(d)) return d;
+	for (let d = date; d >= today; d = addDays(d, -1)) if (studyDays & dayBit(d)) return d;
+	return date;
+}
+
+export function schedulePlan(stages: PlanStage[], today: string, deadline: string, studyDays: number = ALL_DAYS): ScheduledStage[] {
+	const dates = spreadDates(stages.flatMap((s) => s.tasks.map((t) => t.weight)), today, deadline, studyDays);
 	let i = 0;
 	return stages.map((stage) => {
 		const tasks = stage.tasks.map((task): ScheduledTask => ({ ...task, plannedFor: dates[i++] }));
@@ -213,12 +225,12 @@ const countWord = (n: number, one: string, few: string, many: string): string =>
 // Re-spreads the tasks not done yet over the days left, in their current order. Done tasks
 // stay as they are and the deadline never moves, so nothing can land after it. The caller
 // guarantees the deadline has not passed.
-export function replan(tasks: ReplanTask[], today: string, deadline: string): Replan {
+export function replan(tasks: ReplanTask[], today: string, deadline: string, studyDays: number = ALL_DAYS): Replan {
 	const open = tasks.filter((t) => !t.done);
 	if (open.length === 0) return { moves: [], summary: 'Все задачи уже сделаны, пересчитывать нечего.', changed: false };
 
 	const overdue = open.filter((t) => t.plannedFor < today).length;
-	const dates = spreadDates(open.map((t) => t.weight), today, deadline);
+	const dates = spreadDates(open.map((t) => t.weight), today, deadline, studyDays);
 	const moves = open.flatMap((t, i) => (dates[i] !== t.plannedFor ? [{ id: t.id, to: dates[i] }] : []));
 	if (moves.length === 0) return { moves, summary: 'План уже ровный: сдвигать нечего. Просто делай задачи по порядку.', changed: false };
 

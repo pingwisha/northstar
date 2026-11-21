@@ -1,7 +1,7 @@
 // The AI module: owner only, one fixed address, a daily limit, and the key stays on the server.
 import type { Miniflare } from 'miniflare';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AI_BASE_URL, DEFAULT_MODEL, askAi, usedToday, type AiEnv } from '../src/lib/server/ai';
+import { AI_BASE_URL, DEFAULT_MODEL, FALLBACK_MODEL, askAi, usedToday, type AiEnv } from '../src/lib/server/ai';
 import { makeDb } from './helpers';
 
 let mf: Miniflare;
@@ -42,11 +42,53 @@ describe('askAi', () => {
 		expect(JSON.stringify(result)).not.toContain(KEY);
 	});
 
-	it('is closed to members and calls nobody', async () => {
+	it('is closed to members for anything but a plan, and calls nobody', async () => {
 		const fetch = answer();
 		expect(await askAi(env, member, hello, { fetch })).toEqual({ ok: false, error: 'not_available' });
 		expect(fetch).not.toHaveBeenCalled();
 		expect(await usedToday(env.DB, 'm')).toBe(0);
+	});
+
+	it('lets a member ask for a plan, on a smaller budget of their own', async () => {
+		const fetch = answer();
+		const e = { ...env, MEMBER_DAILY_LIMIT: '2' };
+		expect((await askAi(e, member, hello, { fetch, allowMember: true })).ok).toBe(true);
+		expect((await askAi(e, member, hello, { fetch, allowMember: true })).ok).toBe(true);
+		expect(await askAi(e, member, hello, { fetch, allowMember: true })).toEqual({ ok: false, error: 'limit_reached' });
+		expect(fetch).toHaveBeenCalledTimes(2);
+		// The owner has their own budget and is not held back by the members' one.
+		expect((await askAi(e, owner, hello, { fetch })).ok).toBe(true);
+	});
+
+	it('stops all members together at the shared daily cap, but not the owner', async () => {
+		await env.DB.prepare("INSERT INTO users (id, email, role) VALUES ('m2', 'm2@example.com', 'member')").run();
+		const fetch = answer();
+		const e = { ...env, MEMBERS_TOTAL_LIMIT: '2' };
+		expect((await askAi(e, member, hello, { fetch, allowMember: true })).ok).toBe(true);
+		expect((await askAi(e, { userId: 'm2', role: 'member' }, hello, { fetch, allowMember: true })).ok).toBe(true);
+		expect(await askAi(e, member, hello, { fetch, allowMember: true })).toEqual({ ok: false, error: 'service_busy' });
+		expect((await askAi(e, owner, hello, { fetch })).ok).toBe(true);
+		expect(fetch).toHaveBeenCalledTimes(3);
+	});
+
+	it('tries the next model when the first is overloaded, using one request of the budget', async () => {
+		const fetch = vi
+			.fn()
+			.mockResolvedValueOnce(new Response('busy', { status: 503 }))
+			.mockResolvedValueOnce(Response.json({ choices: [{ message: { content: 'ответ' } }] }));
+		expect(await askAi(env, owner, hello, { fetch: fetch as unknown as typeof globalThis.fetch })).toEqual({ ok: true, content: 'ответ' });
+		const models = fetch.mock.calls.map((c) => JSON.parse((c[1] as RequestInit).body as string).model);
+		expect(models).toEqual([DEFAULT_MODEL, FALLBACK_MODEL]);
+		expect(await usedToday(env.DB, 'o')).toBe(1);
+	});
+
+	it('gives up with a clear error when every model fails, and does not retry a refusal', async () => {
+		const down = vi.fn(async () => new Response('busy', { status: 503 }));
+		expect(await askAi(env, owner, hello, { fetch: down })).toEqual({ ok: false, error: 'ai_unavailable' });
+		expect(down).toHaveBeenCalledTimes(2);
+		const refused = vi.fn(async () => new Response('bad key', { status: 401 }));
+		expect(await askAi(env, owner, hello, { fetch: refused })).toEqual({ ok: false, error: 'ai_unavailable' });
+		expect(refused).toHaveBeenCalledTimes(1);
 	});
 
 	it('says so when no key is configured', async () => {

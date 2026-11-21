@@ -13,7 +13,7 @@
 	const act = (name: string) => `${page.url.search}${page.url.search ? '&' : '?'}/${name}`;
 </script>
 
-<li class="flex flex-col gap-3 rounded-xl border bg-card p-3 shadow-sm" data-testid="task">
+<li class="goal-{task.goalColor} rise flex flex-col gap-3 rounded-xl border border-l-4 border-l-[var(--goal)] bg-card p-3 shadow-sm" data-testid="task">
 	<div class="flex items-center gap-3">
 		<form method="POST" action={act('check')} use:enhance class="contents">
 			<input type="hidden" name="id" value={task.id} />
@@ -25,12 +25,12 @@
 				aria-label={task.done ? `Снять отметку: ${task.title}` : `Отметить: ${task.title}`}
 				class="flex size-11 shrink-0 items-center justify-center rounded-md border-2 {task.done ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground'}"
 			>
-				{#if task.done}✓{/if}
+				{#if task.done}<span class="pop">✓</span>{/if}
 			</button>
 		</form>
 		<div class="flex min-w-0 flex-1 flex-col">
 			<span class={task.done ? 'text-muted-foreground line-through' : ''}>{task.title}</span>
-			<span class="text-xs text-muted-foreground">{task.goalTitle}</span>
+			<span class="goal-{task.goalColor} mt-0.5 inline-flex items-center gap-1.5 self-start text-xs text-muted-foreground" data-testid="task-goal"><span class="inline-block size-2 rounded-full bg-[var(--goal)]"></span>{task.goalIcon} {task.goalTitle}</span>
 			{#if task.note}
 				<p class="mt-2 whitespace-pre-line rounded-md bg-muted px-3 py-2 text-sm" data-testid="note">{task.note}</p>
 			{/if}

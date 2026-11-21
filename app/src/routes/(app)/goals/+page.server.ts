@@ -1,6 +1,7 @@
 import { error, fail } from '@sveltejs/kit';
 import { buildCards } from '$lib/goal-view';
-import { MAX_ACTIVE_GOALS, parseDeadline, parseNewGoal, todayIso } from '$lib/goals';
+import { ALL_DAYS, MAX_ACTIVE_GOALS, parseDeadline, parseNewGoal, parseStudyDays, todayIso } from '$lib/goals';
+import { colorOf, isGoalIcon, nextColor, parseLook } from '$lib/goal-look';
 import { scoped } from '$lib/server/db';
 import { replan } from '$lib/plan';
 import { daysUntil } from '$lib/progress';
@@ -23,9 +24,10 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 };
 
 const PLAN_MESSAGES: Record<PlanError, string> = {
-	not_available: 'ИИ пока доступен только владельцу сайта.',
+	not_available: 'Этот помощник пока доступен только владельцу сайта.',
 	not_configured: 'ИИ ещё не подключён: нет ключа.',
-	limit_reached: 'На сегодня лимит запросов к ИИ исчерпан. Попробуй завтра.',
+	limit_reached: 'На сегодня твой лимит запросов к ИИ исчерпан. Попробуй завтра.',
+	service_busy: 'Сегодня ИИ слишком загружен у всех. Попробуй завтра или добавь задачи вручную.',
 	ai_unavailable: 'ИИ сейчас не отвечает. Попробуй через несколько минут.',
 	bad_answer: 'ИИ не смог составить план в нужном виде. Попробуй ещё раз.',
 	deadline_passed: 'Срок цели уже прошёл. Сначала измени срок.'
@@ -44,7 +46,11 @@ export const actions: Actions = {
 		if ((await me.countActiveGoals()) >= MAX_ACTIVE_GOALS) {
 			return fail(400, { action: 'add', message: `Активных целей может быть не больше ${MAX_ACTIVE_GOALS}. Заверши или убери лишние.`, values });
 		}
-		await me.addGoal(parsed.value, today);
+		// Without the weekday boxes (an old form) every day counts; with them, one must stay ticked.
+		const days = data.has('days_form') ? parseStudyDays(data.getAll('days')) : { ok: true as const, value: ALL_DAYS };
+		if (!days.ok) return fail(400, { action: 'add', message: days.message, values });
+		const look = parseLook({ color: data.get('color'), icon: data.get('icon') }, nextColor((await me.listGoals()).length));
+		await me.addGoal({ ...parsed.value, studyDays: days.value, ...look }, today);
 		return { action: 'add', ok: true };
 	},
 
@@ -58,11 +64,60 @@ export const actions: Actions = {
 		return { action: 'deadline', ok: true };
 	},
 
+	days: async ({ request, locals, platform }) => {
+		const me = await mine(locals, platform);
+		const data = await request.formData();
+		const goalId = field(data, 'id');
+		const days = parseStudyDays(data.getAll('days'));
+		if (!days.ok) return fail(400, { action: 'days', goalId, message: days.message });
+		if (!(await me.setStudyDays(goalId, days.value))) return fail(404, { action: 'days', goalId, message: 'Такой цели нет.' });
+
+		// Open tasks are laid out again on the new days; done ones and the deadline stay.
+		const goal = (await me.listGoals()).find((g) => g.id === goalId)!;
+		const today = todayIso(undefined, locals.timezone);
+		const open = (await me.listGoalTasks()).filter((t) => t.goal_id === goalId);
+		if (open.length === 0 || daysUntil(today, goal.deadline) < 0) return { action: 'days', ok: true, goalId };
+		const result = replan(open.map((t) => ({ id: t.id, plannedFor: t.planned_for, weight: t.weight, done: t.completed_at !== null })), today, goal.deadline, days.value);
+		await me.moveTasks(goalId, result.moves);
+		return { action: 'days', ok: true, goalId, summary: result.changed ? result.summary : null };
+	},
+
+	look: async ({ request, locals, platform }) => {
+		const me = await mine(locals, platform);
+		const data = await request.formData();
+		const goalId = field(data, 'id');
+		const goal = (await me.listGoals()).find((g) => g.id === goalId);
+		if (!goal) return fail(404, { action: 'look', goalId, message: 'Такой цели нет.' });
+		const look = parseLook({ color: data.get('color'), icon: data.get('icon') }, colorOf(goal.color), isGoalIcon(goal.icon) ? goal.icon : 'target');
+		await me.setLook(goalId, look.color, look.icon);
+		return { action: 'look', ok: true, goalId };
+	},
+
 	finish: async ({ request, locals, platform }) => {
 		const me = await mine(locals, platform);
 		const goalId = field(await request.formData(), 'id');
 		if (!(await me.setGoalStatus(goalId, 'done'))) return fail(404, { action: 'finish', goalId, message: 'Такой цели нет.' });
 		return { action: 'finish', ok: true };
+	},
+
+	archive: async ({ request, locals, platform }) => {
+		const me = await mine(locals, platform);
+		const goalId = field(await request.formData(), 'id');
+		const goal = (await me.listGoals()).find((g) => g.id === goalId && g.status === 'active');
+		if (!goal || !(await me.setGoalStatus(goalId, 'archived'))) return fail(404, { action: 'archive', goalId, message: 'Такой цели нет.' });
+		return { action: 'archive', ok: true };
+	},
+
+	restore: async ({ request, locals, platform }) => {
+		const me = await mine(locals, platform);
+		const goalId = field(await request.formData(), 'id');
+		const goal = (await me.listGoals()).find((g) => g.id === goalId && g.status === 'archived');
+		if (!goal) return fail(404, { action: 'restore', goalId, message: 'Такой цели нет в архиве.' });
+		if ((await me.countActiveGoals()) >= MAX_ACTIVE_GOALS) {
+			return fail(400, { action: 'restore', goalId, message: `Активных целей может быть не больше ${MAX_ACTIVE_GOALS}. Сначала заверши или убери лишние.` });
+		}
+		if (!(await me.setGoalStatus(goalId, 'active'))) return fail(404, { action: 'restore', goalId, message: 'Такой цели нет в архиве.' });
+		return { action: 'restore', ok: true };
 	},
 
 	behind: async ({ request, locals, platform }) => {
@@ -75,7 +130,7 @@ export const actions: Actions = {
 		const own = (await me.listGoalTasks()).filter((t) => t.goal_id === goal.id);
 		if (own.length === 0) return fail(400, { action: 'behind', goalId, message: 'У цели ещё нет плана, пересчитывать нечего.' });
 
-		const result = replan(own.map((t) => ({ id: t.id, plannedFor: t.planned_for, weight: t.weight, done: t.completed_at !== null })), today, goal.deadline);
+		const result = replan(own.map((t) => ({ id: t.id, plannedFor: t.planned_for, weight: t.weight, done: t.completed_at !== null })), today, goal.deadline, goal.study_days);
 		await me.moveTasks(goal.id, result.moves);
 		return { action: 'behind', ok: true, goalId, summary: result.summary };
 	},

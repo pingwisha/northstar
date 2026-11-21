@@ -71,11 +71,14 @@ describe('chat', () => {
 		expect(rows[1].content).toBe('Сделай это сегодня завтра');
 	});
 
-	it('refuses a member without calling the AI', async () => {
-		const fetchMock = reply('нет');
+	it('lets a member chat, and stops them at their own daily limit', async () => {
+		const fetchMock = reply('Привет!');
 		vi.stubGlobal('fetch', fetchMock);
-		expect(await send('m', 'member', 'Привет')).toMatchObject({ status: 403 });
-		expect(fetchMock).not.toHaveBeenCalled();
+		expect(await send('m', 'member', 'Привет')).toMatchObject({ ok: true });
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		await db.prepare("UPDATE ai_usage SET count = 1000 WHERE user_id = 'm'").run();
+		expect(await send('m', 'member', 'Ещё')).toMatchObject({ status: 502 });
+		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});
 
 	it('stores nothing and returns the text when the AI fails', async () => {

@@ -36,5 +36,5 @@ test('anyone can read the privacy page, a person downloads their data and delete
 
 	// The old session no longer works.
 	await page.goto('/');
-	await expect(page).toHaveURL(/\/login/);
+	await expect(page).toHaveURL(/\/welcome/);
 });
