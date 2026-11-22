@@ -3,7 +3,7 @@ import { buildCards } from '$lib/goal-view';
 import { ALL_DAYS, MAX_ACTIVE_GOALS, parseDeadline, parseNewGoal, parseStudyDays, todayIso } from '$lib/goals';
 import { colorOf, isGoalIcon, nextColor, parseLook } from '$lib/goal-look';
 import { scoped } from '$lib/server/db';
-import { replan } from '$lib/plan';
+import { replan, schedulePlan, type PlanStage } from '$lib/plan';
 import { daysUntil } from '$lib/progress';
 import { generatePlan, type PlanError } from '$lib/server/plan';
 import { appEnv } from '$lib/server/env';
@@ -19,9 +19,25 @@ async function mine(locals: App.Locals, platform: App.Platform | undefined) {
 export const load: PageServerLoad = async ({ locals, platform }) => {
 	const me = await mine(locals, platform);
 	const today = todayIso(undefined, locals.timezone);
-	const [goals, tasks] = await Promise.all([me.listGoals(), me.listGoalTasks()]);
-	return { today, ...buildCards(goals, tasks, today) };
+	const [goals, tasks, drafts] = await Promise.all([me.listGoals(), me.listGoalTasks(), me.listDrafts()]);
+	// A proposed plan is shown dated from today, so a draft left for a few days is never stale.
+	const proposals = drafts.flatMap((d) => {
+		const goal = goals.find((g) => g.id === d.goalId && g.status === 'active');
+		if (!goal || daysUntil(today, goal.deadline) < 0 || tasks.some((t) => t.goal_id === goal.id)) return [];
+		return [{ goalId: goal.id, missing: d.missing, stages: previewStages(d.stages, today, goal.deadline, goal.study_days) }];
+	});
+	return { today, ...buildCards(goals, tasks, today), proposals };
 };
+
+// The proposed plan as the page shows it: every task has a flat number the person can untick.
+function previewStages(stages: PlanStage[], today: string, deadline: string, studyDays: number) {
+	let n = 0;
+	return schedulePlan(stages, today, deadline, studyDays).map((s) => ({
+		title: s.title,
+		dueDate: s.dueDate,
+		tasks: s.tasks.map((t) => ({ n: n++, title: t.title, plannedFor: t.plannedFor, materials: t.materials.length }))
+	}));
+}
 
 const PLAN_MESSAGES: Record<PlanError, string> = {
 	not_available: 'Этот помощник пока доступен только владельцу сайта.',
@@ -120,34 +136,87 @@ export const actions: Actions = {
 		return { action: 'restore', ok: true };
 	},
 
+	// Step one: shows what would move. Nothing is saved until the person confirms.
 	behind: async ({ request, locals, platform }) => {
 		const me = await mine(locals, platform);
 		const goalId = field(await request.formData(), 'id');
-		const goal = (await me.listGoals()).find((g) => g.id === goalId && g.status === 'active');
-		if (!goal) return fail(404, { action: 'behind', goalId, message: 'Такой цели нет.' });
-		const today = todayIso(undefined, locals.timezone);
-		if (daysUntil(today, goal.deadline) < 0) return fail(400, { action: 'behind', goalId, message: PLAN_MESSAGES.deadline_passed });
-		const own = (await me.listGoalTasks()).filter((t) => t.goal_id === goal.id);
-		if (own.length === 0) return fail(400, { action: 'behind', goalId, message: 'У цели ещё нет плана, пересчитывать нечего.' });
-
-		const result = replan(own.map((t) => ({ id: t.id, plannedFor: t.planned_for, weight: t.weight, done: t.completed_at !== null })), today, goal.deadline, goal.study_days);
-		await me.moveTasks(goal.id, result.moves);
-		return { action: 'behind', ok: true, goalId, summary: result.summary };
+		const found = await behindPlan(me, goalId, locals.timezone);
+		if (!found.ok) return fail(found.status, { action: 'behind', goalId, message: found.message });
+		const { result, own } = found;
+		const title = new Map(own.map((t) => [t.id, t]));
+		const changes = result.moves.map((m) => ({ title: title.get(m.id)!.title, from: title.get(m.id)!.planned_for, to: m.to }));
+		return { action: 'behind', ok: true, goalId, summary: result.summary, changed: result.changed, total: changes.length, changes: changes.slice(0, 12) };
 	},
 
+	// Step two: the same calculation again on the server, then it is saved.
+	behindApply: async ({ request, locals, platform }) => {
+		const me = await mine(locals, platform);
+		const goalId = field(await request.formData(), 'id');
+		const found = await behindPlan(me, goalId, locals.timezone);
+		if (!found.ok) return fail(found.status, { action: 'behind', goalId, message: found.message });
+		await me.moveTasks(goalId, found.result.moves);
+		return { action: 'behindApply', ok: true, goalId, summary: found.result.summary };
+	},
+
+	// Asks the AI and keeps the answer as a draft: nothing becomes the person's plan yet.
 	plan: async ({ request, locals, platform }) => {
 		const env = await appEnv(platform);
 		const me = await mine(locals, platform);
 		const goalId = field(await request.formData(), 'id');
 		const goal = (await me.listGoals()).find((g) => g.id === goalId && g.status === 'active');
 		if (!goal) return fail(404, { action: 'plan', goalId, message: 'Такой цели нет.' });
+		if ((await me.listGoalTasks()).some((t) => t.goal_id === goal.id)) return fail(409, { action: 'plan', goalId, message: 'У этой цели уже есть план.' });
 
 		const result = await generatePlan(env!, { userId: locals.userId!, role: locals.role ?? 'member' }, goal, todayIso(undefined, locals.timezone));
 		if (!result.ok) return fail(result.error === 'not_available' ? 403 : 502, { action: 'plan', goalId, message: PLAN_MESSAGES[result.error] });
 
-		const saved = await me.savePlan(goal.id, result.stages);
-		if (saved === 'has_plan') return fail(409, { action: 'plan', goalId, message: 'У этой цели уже есть план.' });
-		if (saved === 'not_found') return fail(404, { action: 'plan', goalId, message: 'Такой цели нет.' });
-		return { action: 'plan', ok: true };
+		await me.saveDraft(goal.id, result.draft, result.missingMaterials);
+		return { action: 'plan', ok: true, goalId };
+	},
+
+	// The person accepted the draft, maybe without some tasks. The dates are laid out again from today.
+	acceptPlan: async ({ request, locals, platform }) => {
+		const me = await mine(locals, platform);
+		const data = await request.formData();
+		const goalId = field(data, 'id');
+		const goal = (await me.listGoals()).find((g) => g.id === goalId && g.status === 'active');
+		const draft = (await me.listDrafts()).find((d) => d.goalId === goalId);
+		if (!goal || !draft) return fail(404, { action: 'acceptPlan', goalId, message: 'Черновика плана нет. Построй план заново.' });
+		const today = todayIso(undefined, locals.timezone);
+		if (daysUntil(today, goal.deadline) < 0) return fail(400, { action: 'acceptPlan', goalId, message: PLAN_MESSAGES.deadline_passed });
+
+		const skip = new Set(data.getAll('skip').map(String));
+		let n = 0;
+		const kept = draft.stages
+			.map((s) => ({ ...s, tasks: s.tasks.filter(() => !skip.has(String(n++))) }))
+			.filter((s) => s.tasks.length > 0);
+		if (kept.length === 0) return fail(400, { action: 'acceptPlan', goalId, message: 'Оставь в плане хотя бы одну задачу.' });
+
+		const saved = await me.savePlan(goal.id, schedulePlan(kept, today, goal.deadline, goal.study_days));
+		if (saved === 'has_plan') {
+			await me.discardDraft(goal.id);
+			return fail(409, { action: 'acceptPlan', goalId, message: 'У этой цели уже есть план.' });
+		}
+		if (saved === 'not_found') return fail(404, { action: 'acceptPlan', goalId, message: 'Такой цели нет.' });
+		return { action: 'acceptPlan', ok: true, goalId };
+	},
+
+	discardPlan: async ({ request, locals, platform }) => {
+		const me = await mine(locals, platform);
+		const goalId = field(await request.formData(), 'id');
+		await me.discardDraft(goalId);
+		return { action: 'discardPlan', ok: true, goalId };
 	}
 };
+
+// What «Я отстаю» would do for a goal, or why it cannot.
+async function behindPlan(me: ReturnType<typeof scoped>, goalId: string, timezone: string | undefined) {
+	const goal = (await me.listGoals()).find((g) => g.id === goalId && g.status === 'active');
+	if (!goal) return { ok: false as const, status: 404, message: 'Такой цели нет.' };
+	const today = todayIso(undefined, timezone);
+	if (daysUntil(today, goal.deadline) < 0) return { ok: false as const, status: 400, message: PLAN_MESSAGES.deadline_passed };
+	const own = (await me.listGoalTasks()).filter((t) => t.goal_id === goal.id);
+	if (own.length === 0) return { ok: false as const, status: 400, message: 'У цели ещё нет плана, пересчитывать нечего.' };
+	const result = replan(own.map((t) => ({ id: t.id, plannedFor: t.planned_for, weight: t.weight, done: t.completed_at !== null })), today, goal.deadline, goal.study_days);
+	return { ok: true as const, result, own };
+}

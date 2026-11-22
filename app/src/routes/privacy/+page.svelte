@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SeoHead from '$lib/components/SeoHead.svelte';
 	import LangSwitch from '$lib/components/LangSwitch.svelte';
 
 	let { data } = $props();
@@ -9,6 +10,7 @@
 </script>
 
 <svelte:head><title>{data.lang === 'ru' ? 'Конфиденциальность. Northstart' : 'Privacy. Northstart'}</title></svelte:head>
+<SeoHead path="/privacy" lang={data.lang} title={data.lang === 'ru' ? 'Конфиденциальность. Northstart' : 'Privacy. Northstart'} description={data.lang === 'ru' ? 'Какие данные Northstart хранит о тебе, где они лежат и как их скачать или удалить.' : 'What data Northstart keeps about you, where it is stored, and how to download or delete it.'} />
 
 <main class="mx-auto flex max-w-2xl flex-col gap-5 px-4 py-10 leading-relaxed">
 	<LangSwitch lang={data.lang} />

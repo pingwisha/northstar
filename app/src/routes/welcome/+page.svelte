@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SeoHead from '$lib/components/SeoHead.svelte';
 	import Logo from '$lib/components/Logo.svelte';
 	import Illustration from '$lib/components/Illustration.svelte';
 	import ProgressRing from '$lib/components/ProgressRing.svelte';
@@ -95,8 +96,8 @@
 
 <svelte:head>
 	<title>{t.title}</title>
-	<meta name="description" content={t.description} />
 </svelte:head>
+<SeoHead path="/welcome" lang={data.lang} title={t.title} description={t.description} />
 
 <div class="mx-auto flex max-w-5xl flex-col gap-16 px-4 py-6 sm:py-10">
 	<header class="flex items-center justify-between gap-3">

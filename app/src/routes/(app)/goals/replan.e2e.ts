@@ -21,6 +21,11 @@ test('a person who fell behind recalculates the plan and sees what changed', asy
 	await expect(card).toContainText('Отстаёшь на 4 задачи');
 
 	await card.getByRole('button', { name: /Я отстаю/ }).click();
+	// First only a preview: nothing is saved yet.
+	await expect(card.getByTestId('replan-preview')).toContainText('Пока ничего не сохранено');
+	await expect(card.getByTestId('replan-preview')).toContainText('Задача 0');
+	await expect(card).toContainText('Отстаёшь на 4 задачи');
+	await card.getByRole('button', { name: 'Применить' }).click();
 	await expect(card.getByTestId('replan-summary')).toContainText('срок цели не изменился');
 	await expect(card).toContainText('Успеваешь');
 	await expect(card.getByRole('button', { name: /Я отстаю/ })).toHaveCount(0);

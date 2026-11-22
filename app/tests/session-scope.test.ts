@@ -174,8 +174,10 @@ describe('the request hook', () => {
 	const run = async (path: string, opts: { session?: string; headers?: Record<string, string>; env?: AuthEnv } = {}) => {
 		const url = new URL(`http://localhost${path}`);
 		const jar: Record<string, string> = { ...(opts.session && { session: opts.session }) };
+		const sent: Record<string, string> = {};
 		const event = {
 			url,
+			setHeaders: (h: Record<string, string>) => Object.assign(sent, h),
 			request: new Request(url, { headers: { accept: 'text/html', ...opts.headers } }),
 			cookies: { get: (n: string) => jar[n] },
 			locals: {} as App.Locals,
@@ -183,8 +185,13 @@ describe('the request hook', () => {
 		} as unknown as Input['event'];
 		const resolve = vi.fn(async () => new Response('ok'));
 		const response = await handle({ event, resolve } as unknown as Input);
-		return { response, locals: event.locals, resolve };
+		return { response, locals: event.locals, resolve, sent };
 	};
+
+	it('keeps the sign-in page out of search, but not the public description pages', async () => {
+		expect((await run('/login')).sent['x-robots-tag']).toContain('noindex');
+		for (const path of ['/welcome', '/privacy', '/terms']) expect((await run(path)).sent['x-robots-tag']).toBeUndefined();
+	});
 
 	it('sends an anonymous visitor on the front page to the welcome page and gives no content', async () => {
 		const { response, resolve } = await run('/');

@@ -19,7 +19,8 @@ export const E2E = {
 	report: { id: 'e2e-report', email: 'e2e-report@example.com' },
 	exam: { id: 'e2e-exam', email: 'e2e-exam@example.com' },
 	zone: { id: 'e2e-zone', email: 'e2e-zone@example.com' },
-	account: { id: 'e2e-account', email: 'e2e-account@example.com' }
+	account: { id: 'e2e-account', email: 'e2e-account@example.com' },
+	draft: { id: 'e2e-draft', email: 'e2e-draft@example.com' }
 } as const;
 
 type Person = { id: string; email: string };

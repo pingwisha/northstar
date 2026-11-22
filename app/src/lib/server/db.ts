@@ -3,7 +3,7 @@
 // invite helpers are the exceptions: they run before a user id exists, or on
 // behalf of the owner, whose role the caller has already checked.
 
-import type { ScheduledStage } from '$lib/plan';
+import type { PlanStage, ScheduledStage } from '$lib/plan';
 import type { NewTrial, Trial } from '$lib/trials';
 import type { Mistake, NewMistake } from '$lib/mistakes';
 
@@ -150,6 +150,7 @@ export function scoped(db: D1Database, userId: string) {
 				tasks: await all('SELECT id, goal_id, title, planned_for, weight, completed_at, note, created_at FROM tasks WHERE user_id = ? ORDER BY planned_for, rowid'),
 				materials: await all('SELECT id, task_id, kind, title, url, source, own FROM materials WHERE user_id = ? ORDER BY rowid'),
 				trials: await all('SELECT id, goal_id, taken_on, title, score, max_score, weak_topics FROM trials WHERE user_id = ? ORDER BY taken_on, rowid'),
+				planDrafts: await all('SELECT goal_id, plan, missing, created_at FROM plan_drafts WHERE user_id = ?'),
 				mistakes: await all('SELECT id, goal_id, topic, note, created_at, fixed_at FROM mistakes WHERE user_id = ? ORDER BY created_at, rowid'),
 				chatMessages: await all('SELECT chat_id, role, content, created_at FROM chat_messages WHERE user_id = ? ORDER BY created_at, rowid')
 			};
@@ -344,8 +345,36 @@ export function scoped(db: D1Database, userId: string) {
 					}
 				}
 			});
+			statements.push(db.prepare('DELETE FROM plan_drafts WHERE goal_id = ? AND user_id = ?').bind(goalId, userId));
 			await db.batch(statements);
 			return 'saved';
+		},
+
+		// The plan the AI proposed and the person has not accepted yet (one per goal, a new one replaces it).
+		async saveDraft(goalId: string, stages: PlanStage[], missing: number): Promise<boolean> {
+			const goal = await db.prepare("SELECT id FROM goals WHERE id = ? AND user_id = ? AND status = 'active'").bind(goalId, userId).first();
+			if (!goal) return false;
+			await db
+				.prepare("INSERT INTO plan_drafts (goal_id, user_id, plan, missing) VALUES (?, ?, ?, ?) ON CONFLICT (goal_id) DO UPDATE SET plan = excluded.plan, missing = excluded.missing, created_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')")
+				.bind(goalId, userId, JSON.stringify(stages), missing)
+				.run();
+			return true;
+		},
+
+		async listDrafts(): Promise<{ goalId: string; stages: PlanStage[]; missing: number }[]> {
+			const rows = (await db.prepare('SELECT goal_id, plan, missing FROM plan_drafts WHERE user_id = ?').bind(userId).all<{ goal_id: string; plan: string; missing: number }>()).results;
+			return rows.flatMap((r) => {
+				try {
+					const stages = JSON.parse(r.plan) as PlanStage[];
+					return Array.isArray(stages) && stages.length > 0 ? [{ goalId: r.goal_id, stages, missing: r.missing }] : [];
+				} catch {
+					return [];
+				}
+			});
+		},
+
+		async discardDraft(goalId: string): Promise<void> {
+			await db.prepare('DELETE FROM plan_drafts WHERE goal_id = ? AND user_id = ?').bind(goalId, userId).run();
 		},
 
 		// Adds tasks written by hand to one of the person's active goals. They belong to no stage.

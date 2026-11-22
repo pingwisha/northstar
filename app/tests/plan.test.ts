@@ -159,38 +159,100 @@ describe('saving a plan', () => {
 
 describe('the plan action', () => {
 	type Event = Parameters<NonNullable<typeof actions.plan>>[0];
-	const run = (userId: string, role: 'owner' | 'member', id: string) => {
+	const call = (name: 'plan' | 'acceptPlan' | 'discardPlan', userId: string, role: 'owner' | 'member', id: string, extra: [string, string][] = [], environment: object = env()) => {
 		const body = new FormData();
 		body.set('id', id);
+		for (const [k, v] of extra) body.append(k, v);
 		const request = new Request('http://localhost/goals', { method: 'POST', body });
-		return actions.plan!({ request, locals: { userId, role }, platform: { env: env() } } as unknown as Event);
+		return actions[name]!({ request, locals: { userId, role }, platform: { env: environment } } as unknown as Event);
 	};
+	const run = (userId: string, role: 'owner' | 'member', id: string) => call('plan', userId, role, id);
+	const tasksOf = async (userId: string) => await scoped(db, userId).listGoalTasks();
 
-	it('builds and saves a plan for the owner', async () => {
+	it('keeps the AI answer as a draft and saves no tasks until it is accepted', async () => {
 		vi.stubGlobal('fetch', web());
 		const id = await scoped(db, 'o').addGoal({ ...goal, deadline: '2030-01-01' }, '2026-11-18');
 		expect(await run('o', 'owner', id)).toMatchObject({ ok: true });
-		expect((await scoped(db, 'o').listGoalTasks()).length).toBe(3);
+		expect(await tasksOf('o')).toHaveLength(0);
+		const drafts = await scoped(db, 'o').listDrafts();
+		expect(drafts).toHaveLength(1);
+		expect(drafts[0].stages.flatMap((s) => s.tasks)).toHaveLength(3);
 	});
 
-	it('builds and saves a plan for a member, within their own limit', async () => {
+	it('accepts the draft, saves the plan and removes the draft', async () => {
+		vi.stubGlobal('fetch', web());
+		const id = await scoped(db, 'o').addGoal({ ...goal, deadline: '2030-01-01' }, '2026-11-18');
+		await run('o', 'owner', id);
+		expect(await call('acceptPlan', 'o', 'owner', id)).toMatchObject({ ok: true });
+		expect(await tasksOf('o')).toHaveLength(3);
+		expect(await scoped(db, 'o').listDrafts()).toHaveLength(0);
+	});
+
+	it('leaves out the tasks the person unticked and drops a stage left empty', async () => {
+		vi.stubGlobal('fetch', web());
+		const id = await scoped(db, 'o').addGoal({ ...goal, deadline: '2030-01-01' }, '2026-11-18');
+		await run('o', 'owner', id);
+		// Tasks are numbered 0, 1 (stage one) and 2 (stage two).
+		expect(await call('acceptPlan', 'o', 'owner', id, [['skip', '2']])).toMatchObject({ ok: true });
+		expect((await tasksOf('o')).map((t) => t.title).sort()).toEqual(['Прочитать главу 1', 'Решить 10 задач']);
+		expect((await db.prepare('SELECT COUNT(*) AS n FROM stages').first<{ n: number }>())!.n).toBe(1);
+	});
+
+	it('refuses to accept a plan with every task unticked', async () => {
+		vi.stubGlobal('fetch', web());
+		const id = await scoped(db, 'o').addGoal({ ...goal, deadline: '2030-01-01' }, '2026-11-18');
+		await run('o', 'owner', id);
+		expect(await call('acceptPlan', 'o', 'owner', id, [['skip', '0'], ['skip', '1'], ['skip', '2']])).toMatchObject({ status: 400 });
+		expect(await tasksOf('o')).toHaveLength(0);
+		expect(await scoped(db, 'o').listDrafts()).toHaveLength(1);
+	});
+
+	it('discards a draft, and a newer draft replaces an older one', async () => {
+		vi.stubGlobal('fetch', web());
+		const id = await scoped(db, 'o').addGoal({ ...goal, deadline: '2030-01-01' }, '2026-11-18');
+		await run('o', 'owner', id);
+		await run('o', 'owner', id);
+		expect(await scoped(db, 'o').listDrafts()).toHaveLength(1);
+		await call('discardPlan', 'o', 'owner', id);
+		expect(await scoped(db, 'o').listDrafts()).toHaveLength(0);
+		expect(await call('acceptPlan', 'o', 'owner', id)).toMatchObject({ status: 404 });
+	});
+
+	it('does not let another person accept or discard someone else\'s draft', async () => {
+		vi.stubGlobal('fetch', web());
+		const id = await scoped(db, 'm').addGoal({ ...goal, deadline: '2030-01-01' }, '2026-11-18');
+		await run('m', 'member', id);
+		expect(await call('acceptPlan', 'o', 'owner', id)).toMatchObject({ status: 404 });
+		await call('discardPlan', 'o', 'owner', id);
+		expect(await scoped(db, 'm').listDrafts()).toHaveLength(1);
+		expect(await tasksOf('m')).toHaveLength(0);
+	});
+
+	it('does not ask the AI again for a goal that already has a plan', async () => {
+		const send = web();
+		vi.stubGlobal('fetch', send);
+		const id = await scoped(db, 'o').addGoal({ ...goal, deadline: '2030-01-01' }, '2026-11-18');
+		await run('o', 'owner', id);
+		await call('acceptPlan', 'o', 'owner', id);
+		const before = send.mock.calls.length;
+		expect(await run('o', 'owner', id)).toMatchObject({ status: 409 });
+		expect(send.mock.calls.length).toBe(before);
+	});
+
+	it('builds a draft for a member, within their own limit', async () => {
 		vi.stubGlobal('fetch', web());
 		const id = await scoped(db, 'm').addGoal({ ...goal, deadline: '2030-01-01' }, '2026-11-18');
 		expect(await run('m', 'member', id)).toMatchObject({ ok: true });
-		expect((await scoped(db, 'm').listGoalTasks()).length).toBe(3);
+		expect(await scoped(db, 'm').listDrafts()).toHaveLength(1);
 		expect(await usedToday(db, 'm')).toBeGreaterThan(0);
 	});
 
 	it('tells a member who used the daily limit to wait, and stores nothing', async () => {
 		vi.stubGlobal('fetch', web());
 		const id = await scoped(db, 'm').addGoal({ ...goal, deadline: '2030-01-01' }, '2026-11-18');
-		const tight = () => ({ ...env(), MEMBER_DAILY_LIMIT: '1' });
 		await db.prepare('INSERT INTO ai_usage (user_id, day, count) VALUES (?, ?, 1)').bind('m', new Date().toISOString().slice(0, 10)).run();
-		const body = new FormData();
-		body.set('id', id);
-		const call = () => actions.plan!({ request: new Request('http://localhost/goals', { method: 'POST', body }), locals: { userId: 'm', role: 'member' }, platform: { env: tight() } } as unknown as Event);
-		expect(await call()).toMatchObject({ status: 502 });
-		expect(await scoped(db, 'm').listGoalTasks()).toHaveLength(0);
+		expect(await call('plan', 'm', 'member', id, [], { ...env(), MEMBER_DAILY_LIMIT: '1' })).toMatchObject({ status: 502 });
+		expect(await scoped(db, 'm').listDrafts()).toHaveLength(0);
 	});
 
 	it('does not build a plan for someone else\'s goal', async () => {

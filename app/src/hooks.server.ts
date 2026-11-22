@@ -46,5 +46,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			headers: { 'content-type': 'application/json' }
 		});
 	}
+	// Only the description, privacy and terms pages belong in search; sign-in and everything behind it does not.
+	if (!['/welcome', '/privacy', '/terms'].includes(path)) event.setHeaders({ 'x-robots-tag': 'noindex, nofollow' });
 	return resolve(event);
 };

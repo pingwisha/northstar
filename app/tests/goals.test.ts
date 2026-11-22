@@ -82,7 +82,8 @@ describe('«Я отстаю»', () => {
 	const addTasks = async (userId: string, goalId: string, days: string[]) => {
 		await db.batch(days.map((d, i) => db.prepare('INSERT INTO tasks (id, user_id, goal_id, title, planned_for) VALUES (?, ?, ?, ?, ?)').bind(`${userId}-${goalId}-${i}`, userId, goalId, `З${i}`, d)));
 	};
-	const behind = (userId: string, id: string) => actions.behind!(as(userId, post({ id })));
+	const behind = (userId: string, id: string) => actions.behindApply!(as(userId, post({ id })));
+	const preview = (userId: string, id: string) => actions.behind!(as(userId, post({ id })));
 
 	it('moves overdue tasks to today or later and keeps the deadline', async () => {
 		const id = await scoped(db, 'a').addGoal(goal, '2026-01-01');
@@ -94,6 +95,16 @@ describe('«Я отстаю»', () => {
 		expect(rows.some((t) => t.planned_for < new Date().toISOString().slice(0, 10) && t.completed_at === null)).toBe(false);
 		expect(rows.every((t) => t.planned_for < goal.deadline)).toBe(true);
 		expect((await scoped(db, 'a').listGoals())[0].deadline).toBe(goal.deadline);
+	});
+
+	it('first only shows what would change and saves nothing', async () => {
+		const id = await scoped(db, 'a').addGoal(goal, '2026-01-01');
+		await addTasks('a', id, ['2026-01-02', '2026-01-03', '2026-01-04']);
+		const shown = (await preview('a', id)) as { ok?: boolean; changed?: boolean; total?: number; changes?: { title: string; from: string; to: string }[] };
+		expect(shown).toMatchObject({ ok: true, changed: true, total: 3 });
+		expect(shown.changes![0]).toMatchObject({ title: 'З0', from: '2026-01-02' });
+		expect((await scoped(db, 'a').listGoalTasks()).map((t) => t.planned_for)).toEqual(['2026-01-02', '2026-01-03', '2026-01-04']);
+		expect(await preview('b', id)).toMatchObject({ status: 404 });
 	});
 
 	it('does not move another person\'s tasks', async () => {

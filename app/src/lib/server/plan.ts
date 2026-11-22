@@ -66,7 +66,7 @@ export async function generatePlan(
 	goal: { title: string; description: string | null; deadline: string; study_days?: number },
 	today: string,
 	deps: PlanDeps = {}
-): Promise<{ ok: true; stages: ScheduledStage[]; missingMaterials: number } | { ok: false; error: PlanError }> {
+): Promise<{ ok: true; stages: ScheduledStage[]; draft: PlanStage[]; missingMaterials: number } | { ok: false; error: PlanError }> {
 	const days = daysUntil(today, goal.deadline);
 	if (days < 0) return { ok: false, error: 'deadline_passed' };
 	const messages = buildPlanMessages(goal, today, targetTaskCount(days + 1));
@@ -82,7 +82,7 @@ export async function generatePlan(
 		if (!parsed.ok) continue;
 		const withMaterials = await addMaterials(env, caller, goal, parsed.stages, deps.fetch);
 		const checked = await verifyLinks(withMaterials.stages, deps.fetch);
-		return { ok: true, stages: schedulePlan(checked, today, goal.deadline, goal.study_days), missingMaterials: withMaterials.missing };
+		return { ok: true, stages: schedulePlan(checked, today, goal.deadline, goal.study_days), draft: checked, missingMaterials: withMaterials.missing };
 	}
 	return { ok: false, error: 'bad_answer' };
 }

@@ -130,6 +130,10 @@
 				{/if}
 
 				{#if card.taskCount === 0}
+					{@const proposal = data.proposals.find((p) => p.goalId === card.id)}
+					{#if proposal}
+						{@render proposalView(card.id, proposal)}
+					{/if}
 					<form
 						method="POST"
 						action="?/plan"
@@ -142,11 +146,15 @@
 						}}
 					>
 						<input type="hidden" name="id" value={card.id} />
-						<button type="submit" disabled={planning !== null} class="h-11 w-full rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-60">
-							{planning === card.id ? 'ИИ строит план, это займёт до минуты…' : 'Построить план'}
+						<button
+							type="submit"
+							disabled={planning !== null}
+							class="h-11 w-full rounded-md px-4 text-sm font-medium disabled:opacity-60 {proposal ? 'border' : 'bg-primary text-primary-foreground'}"
+						>
+							{planning === card.id ? 'ИИ строит план, это займёт до минуты…' : proposal ? 'Предложить другой план (ещё один запрос к ИИ)' : 'Построить план'}
 						</button>
 					</form>
-					{#if form?.action === 'plan' && form.goalId === card.id && form.message}
+					{#if form?.action === 'plan' && form.goalId === card.id && 'message' in form && form.message}
 						<p role="alert" class="text-sm text-destructive">{form.message}</p>
 					{/if}
 				{/if}
@@ -158,11 +166,36 @@
 					</form>
 				{/if}
 				{#if form?.action === 'behind' && form.goalId === card.id}
-					{#if 'summary' in form && form.summary}
-						<p class="rounded-md bg-muted p-3 text-sm" data-testid="replan-summary">{form.summary}</p>
-					{:else if form.message}
+					{#if 'changes' in form}
+						<div class="flex flex-col gap-2 rounded-md bg-muted p-3 text-sm" data-testid="replan-preview">
+							<p class="font-medium">Вот что изменится. Пока ничего не сохранено.</p>
+							<p>{form.summary}</p>
+							{#if form.changed}
+								<ul class="flex flex-col gap-1">
+									{#each form.changes as c, i (i)}
+										<li class="flex flex-wrap justify-between gap-x-3">
+											<span class="min-w-0">{c.title}</span>
+											<span class="text-muted-foreground">{formatDate(c.from)} → {formatDate(c.to)}</span>
+										</li>
+									{/each}
+								</ul>
+								{#if form.total > form.changes.length}
+									<p class="text-muted-foreground">…и ещё {form.total - form.changes.length}</p>
+								{/if}
+								<div class="flex flex-wrap gap-2">
+									<form method="POST" action="?/behindApply" use:enhance>
+										<input type="hidden" name="id" value={card.id} />
+										<button type="submit" class="h-10 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">Применить</button>
+									</form>
+								</div>
+							{/if}
+						</div>
+					{:else if 'message' in form && form.message}
 						<p role="alert" class="text-sm text-destructive">{form.message}</p>
 					{/if}
+				{/if}
+				{#if form?.action === 'behindApply' && form.goalId === card.id && 'summary' in form}
+					<p class="rounded-md bg-muted p-3 text-sm" data-testid="replan-summary">{form.summary}</p>
 				{/if}
 
 				<div class="flex flex-wrap gap-2">
@@ -220,6 +253,43 @@
 		</section>
 	{/if}
 </main>
+
+{#snippet proposalView(goalId: string, proposal: (typeof data.proposals)[number])}
+	{@const count = proposal.stages.reduce((n, s) => n + s.tasks.length, 0)}
+	<div class="flex flex-col gap-3 rounded-lg border-2 border-primary/40 p-3" data-testid="plan-proposal">
+		<div>
+			<p class="font-medium">Черновик плана от ИИ</p>
+			<p class="text-sm text-muted-foreground">Пока это только предложение: ничего не сохранено. Сними галочку у лишней задачи, а потом нажми «Принять план». Даты разложатся заново по оставшимся задачам.</p>
+		</div>
+		<form method="POST" action="?/acceptPlan" use:enhance class="flex flex-col gap-3">
+			<input type="hidden" name="id" value={goalId} />
+			{#each proposal.stages as stage, i (i)}
+				<fieldset class="flex flex-col gap-1">
+					<legend class="text-sm font-semibold">{i + 1}. {stage.title} <span class="font-normal text-muted-foreground">до {formatDate(stage.dueDate)}</span></legend>
+					{#each stage.tasks as task (task.n)}
+						<label class="flex items-start gap-2 text-sm">
+							<input type="checkbox" checked onchange={(e) => { /* an unticked task is sent as skip */ const box = e.currentTarget; const hidden = box.nextElementSibling as HTMLInputElement; hidden.disabled = box.checked; }} class="mt-1 size-4" aria-label={task.title} />
+							<input type="hidden" name="skip" value={task.n} disabled />
+							<span class="min-w-0 flex-1">{task.title}</span>
+							<span class="shrink-0 text-muted-foreground">{formatDate(task.plannedFor)}{task.materials ? ` · ${task.materials} мат.` : ''}</span>
+						</label>
+					{/each}
+				</fieldset>
+			{/each}
+			<p class="text-sm text-muted-foreground">Всего задач: {count}.{proposal.missing > 0 ? ` К ${proposal.missing} эт. материалы не подобрались, их можно добавить вручную.` : ''}</p>
+			<div class="flex flex-wrap gap-2">
+				<button type="submit" class="h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">Принять план</button>
+			</div>
+		</form>
+		<form method="POST" action="?/discardPlan" use:enhance>
+			<input type="hidden" name="id" value={goalId} />
+			<button type="submit" class="h-10 rounded-md border px-3 text-sm">Отклонить черновик</button>
+		</form>
+		{#if (form?.action === 'acceptPlan' || form?.action === 'discardPlan') && form.goalId === goalId && 'message' in form && form.message}
+			<p role="alert" class="text-sm text-destructive">{form.message}</p>
+		{/if}
+	</div>
+{/snippet}
 
 {#snippet lookPicker(id: string, color: string, icon: string)}
 	<fieldset class="flex flex-col gap-2 text-sm">

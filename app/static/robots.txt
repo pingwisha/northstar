@@ -1,3 +1,9 @@
-# Site is invite-only for now: ask crawlers not to index it
+# The public pages may be found in search; everything else needs signing in.
 User-agent: *
+Allow: /$
+Allow: /welcome
+Allow: /privacy
+Allow: /terms
 Disallow: /
+
+Sitemap: https://northstar-5gb.pages.dev/sitemap.xml
