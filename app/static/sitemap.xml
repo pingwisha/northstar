@@ -1,18 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://northstar-5gb.pages.dev/welcome?lang=en</loc>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://northstar-5gb.pages.dev/welcome?lang=ru"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://northstar-5gb.pages.dev/welcome?lang=en"/>
+  </url>
+  <url>
+    <loc>https://northstar-5gb.pages.dev/welcome?lang=ru</loc>
   </url>
   <url>
     <loc>https://northstar-5gb.pages.dev/privacy?lang=en</loc>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://northstar-5gb.pages.dev/privacy?lang=ru"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://northstar-5gb.pages.dev/privacy?lang=en"/>
+  </url>
+  <url>
+    <loc>https://northstar-5gb.pages.dev/privacy?lang=ru</loc>
   </url>
   <url>
     <loc>https://northstar-5gb.pages.dev/terms?lang=en</loc>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://northstar-5gb.pages.dev/terms?lang=ru"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://northstar-5gb.pages.dev/terms?lang=en"/>
+  </url>
+  <url>
+    <loc>https://northstar-5gb.pages.dev/terms?lang=ru</loc>
   </url>
 </urlset>
