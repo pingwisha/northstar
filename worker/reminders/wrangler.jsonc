@@ -1,0 +1,15 @@
+{
+	"$schema": "../../app/node_modules/wrangler/config-schema.json",
+	"name": "northstar-reminders",
+	"main": "index.ts",
+	"compatibility_date": "2026-11-16",
+	"workers_dev": false,
+	"triggers": { "crons": ["0 * * * *"] },
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "northstar",
+			"database_id": "11234c68-f073-4299-93c8-81cb016d4336"
+		}
+	]
+}

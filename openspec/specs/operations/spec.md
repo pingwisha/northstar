@@ -40,3 +40,14 @@
 #### Scenario: Резервная копия
 - **WHEN** запускается scripts/backup.sh
 - **THEN** создаётся файл backups/northstar-ДАТА-ВРЕМЯ.sql
+
+### Requirement: Scheduled reminder worker
+Система SHALL публиковать почасовой Worker напоминаний отдельно от сайта (папка worker/reminders, wrangler deploy), с тем же привязанным D1 и секретами VAPID_PUBLIC_KEY и VAPID_PRIVATE_KEY, и MUST хранить закрытый ключ только в секретах и в .env вне git.
+
+#### Scenario: Публикация Worker
+- **WHEN** меняется логика напоминаний
+- **THEN** сайт публикуется командой wrangler pages deploy, а Worker отдельной командой wrangler deploy из worker/reminders, потому что общий код подхватывается при сборке каждого из них
+
+#### Scenario: Ключи
+- **WHEN** репозиторий публикуется
+- **THEN** закрытого ключа VAPID в нём нет

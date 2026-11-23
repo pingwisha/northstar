@@ -29,7 +29,7 @@ describe('foundation schema', () => {
 			.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE '_cf_%' AND name NOT LIKE 'sqlite_%'")
 			.all<{ name: string }>();
 		expect(results.map((r) => r.name).sort()).toEqual(['ai_usage', 'chat_messages', 'chats', 'goals', 'invites', 'materials',
-			'mistakes', 'plan_drafts', 'stages', 'tasks', 'trials', 'users']);
+			'mistakes', 'plan_drafts', 'push_subscriptions', 'stages', 'tasks', 'trials', 'users']);
 	});
 
 	it('keeps one user per email, ignoring case', async () => {
@@ -55,9 +55,10 @@ describe('foundation schema', () => {
 		await run("INSERT INTO chat_messages (id, user_id, chat_id, role, content) VALUES ('cm1', 'u1', 'c1', 'user', 'привет')");
 		await run("INSERT INTO ai_usage (user_id, day, count) VALUES ('u1', '2026-11-18', 3)");
 		await run("INSERT INTO plan_drafts (goal_id, user_id, plan) VALUES ('g1', 'u1', '[]')");
+		await run("INSERT INTO push_subscriptions (id, user_id, endpoint, timezone, hour) VALUES ('p1', 'u1', 'https://fcm.googleapis.com/fcm/send/x', 'UTC', 9)");
 		await run("DELETE FROM users WHERE id = 'u1'");
 		for (const table of ['goals', 'tasks', 'materials',
-			'mistakes', 'plan_drafts', 'chats', 'chat_messages', 'ai_usage']) {
+			'mistakes', 'plan_drafts', 'push_subscriptions', 'chats', 'chat_messages', 'ai_usage']) {
 			expect(await count(table)).toBe(0);
 		}
 	});

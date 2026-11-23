@@ -35,3 +35,16 @@ test('a new person sees the welcome with three steps', async ({ page, context })
 	await expect(page.getByTestId('home-empty')).toContainText('Добро пожаловать');
 	await expect(page.getByRole('list', { name: 'Как это работает' }).getByRole('listitem')).toHaveCount(3);
 });
+
+test('the settings page has the reminders block and says plainly when reminders are not set up', async ({ page, context }) => {
+	await signInAs(context, E2E.owner);
+	await page.goto('/settings');
+	const block = page.getByTestId('reminders');
+	await expect(block).toBeVisible();
+	await expect(block).toContainText('Раз в день');
+	// The test site has no push keys, so the person is told instead of seeing a button that fails.
+	await expect(block).toContainText('ещё не настроены');
+	await expect(page.getByTestId('reminder-on')).toHaveCount(0);
+	const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+	expect(overflow).toBeLessThanOrEqual(0);
+});

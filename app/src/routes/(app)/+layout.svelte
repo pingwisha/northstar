@@ -92,7 +92,7 @@
 					{/if}
 				</svg>
 			</button>
-			<a href="/settings" class="flex size-9 items-center justify-center rounded-full border text-muted-foreground hover:text-foreground" aria-label="Оформление" title="Оформление" data-testid="settings-link">
+			<a href="/settings" class="flex size-9 items-center justify-center rounded-full border text-muted-foreground hover:text-foreground" aria-label="Настройки" title="Настройки" data-testid="settings-link">
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 100 18 2 2 0 002-2c0-.6-.3-1-.6-1.4-.3-.4-.4-.8-.4-1.2a2 2 0 012-2h2.3A2.7 2.7 0 0021 11.7C21 6.9 17 3 12 3z" /><circle cx="7.5" cy="11" r="1" /><circle cx="10.5" cy="7.5" r="1" /><circle cx="15" cy="7.5" r="1" /></svg>
 			</a>
 			<form method="POST" action="/auth/logout">

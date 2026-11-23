@@ -23,6 +23,7 @@
 			<li>Почту твоего Google-аккаунта: по ней сайт узнаёт тебя при входе. Пароля у сайта нет.</li>
 			<li>Всё, что ты записала сама: цели, сроки, задачи, заметки, ссылки, результаты пробников, ошибки, переписку с ИИ.</li>
 			<li>Часовой пояс твоего браузера, чтобы правильно считать «сегодня».</li>
+			<li>Если ты включила напоминания: служебный адрес уведомлений твоего браузера, выбранный час и часовой пояс. Выключить и стереть это можно в настройках.</li>
 			<li>В браузере хранятся: cookie входа (чтобы ты оставалась в аккаунте), cookie часового пояса и настройки оформления.</li>
 		</ul>
 
@@ -55,6 +56,7 @@
 			<li>The email of your Google account, so the site recognises you when you sign in. The site has no password.</li>
 			<li>Everything you write yourself: goals, deadlines, tasks, notes, links, practice test results, mistakes and your chats with the AI.</li>
 			<li>Your browser's time zone, to count "today" correctly.</li>
+			<li>If you turn reminders on: the notification address your browser gives, the hour you chose and your time zone. You can turn this off, and erase it, in the settings.</li>
 			<li>In your browser: a sign-in cookie (so you stay signed in), a time-zone cookie and your appearance settings.</li>
 		</ul>
 

@@ -17,14 +17,14 @@ context: |
 
   Стек: SvelteKit 3 и Svelte 5 (руны), Tailwind 4, TypeScript, adapter-cloudflare.
   Хостинг: Cloudflare Pages, проект northstar, адрес https://northstar-5gb.pages.dev.
-  База: Cloudflare D1 (SQLite), база northstar. Схема лежит в migrations/ (0001..0007),
+  База: Cloudflare D1 (SQLite), база northstar. Схема лежит в migrations/ (0001..0008),
   даты хранятся строками YYYY-MM-DD, моменты времени строками ISO 8601 UTC.
   Вход: только Google OAuth (PKCE) и подписанная cookie сессии (JWT HS256, 30 дней).
   ИИ: Gemini через OpenAI-совместимый адрес, только с сервера (src/lib/server/ai.ts),
   основная модель gemini-3.1-flash-lite, запасная gemini-3.5-flash-lite.
   Секреты (в Cloudflare и в .env, который не коммитится): GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
   SESSION_SECRET, ALLOWED_EMAILS (владельцы), GEMINI_API_KEY; необязательные: SIGNUP, SIGNUP_DAILY_LIMIT,
-  DAILY_LIMIT, MEMBER_DAILY_LIMIT, MEMBERS_TOTAL_LIMIT, AI_MODEL.
+  DAILY_LIMIT, MEMBER_DAILY_LIMIT, MEMBERS_TOTAL_LIMIT, AI_MODEL; ключи напоминаний VAPID_PUBLIC_KEY и VAPID_PRIVATE_KEY (и в Pages, и в Worker).
 
   Где что лежит:
   - app/src/lib: чистая логика без базы и часов (progress, goals, plan, streak, trials, mistakes, quiz, exam,
@@ -32,6 +32,7 @@ context: |
   - app/src/lib/server: всё, что говорит с базой, ИИ и входом (db.ts, ai.ts, plan.ts, auth/).
   - app/src/routes: страницы; закрытые лежат в группе (app), публичные: welcome, login, privacy, terms.
   - app/src/hooks.server.ts: проверка входа, перенаправления, заголовок X-Robots-Tag.
+  - worker/reminders: отдельный Worker по расписанию (каждый час), рассылает напоминания; публикуется wrangler deploy из этой папки.
   - migrations/: SQL-миграции по порядку. scripts/backup.sh: копия боевой базы в backups/ (не в git).
   - docs/: описание этапов, план, идеи.
 

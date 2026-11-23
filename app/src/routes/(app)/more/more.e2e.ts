@@ -11,7 +11,7 @@ test('on a phone the rare sections are behind «Ещё» and the bottom bar stay
 	await bar.getByRole('link', { name: 'Ещё' }).click();
 	await expect(page).toHaveURL(/\/more/);
 	const list = page.getByTestId('more-list');
-	for (const name of ['Проверь себя', 'Пробники', 'Тетрадь ошибок', 'Недельный отчёт', 'Режим экзамена', 'Оформление', 'Мои данные', 'Написать нам']) {
+	for (const name of ['Проверь себя', 'Пробники', 'Тетрадь ошибок', 'Недельный отчёт', 'Режим экзамена', 'Настройки', 'Мои данные', 'Написать нам']) {
 		await expect(list.getByRole('link', { name: new RegExp(name) })).toBeVisible();
 	}
 	// A member does not see the owner's page.

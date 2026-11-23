@@ -19,6 +19,9 @@ export interface AuthEnv {
 	SIGNUP_DAILY_LIMIT?: string;
 	// Set to "open" to let any verified Google account in as a member. Anything else keeps the site invite-only.
 	SIGNUP?: string;
+	// Keys that sign web push messages for the daily reminders (see src/lib/server/push.ts).
+	VAPID_PUBLIC_KEY?: string;
+	VAPID_PRIVATE_KEY?: string;
 }
 
 export type SignInFailure = 'state' | 'exchange' | 'id_token' | 'unverified' | 'not_allowed' | 'signups_full';

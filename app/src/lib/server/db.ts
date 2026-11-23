@@ -159,6 +159,7 @@ export function scoped(db: D1Database, userId: string) {
 				tasks: await all('SELECT id, goal_id, title, planned_for, weight, completed_at, note, created_at FROM tasks WHERE user_id = ? ORDER BY planned_for, rowid'),
 				materials: await all('SELECT id, task_id, kind, title, url, source, own FROM materials WHERE user_id = ? ORDER BY rowid'),
 				trials: await all('SELECT id, goal_id, taken_on, title, score, max_score, weak_topics FROM trials WHERE user_id = ? ORDER BY taken_on, rowid'),
+				pushSubscriptions: await all('SELECT endpoint, timezone, hour, created_at FROM push_subscriptions WHERE user_id = ?'),
 				planDrafts: await all('SELECT goal_id, plan, missing, created_at FROM plan_drafts WHERE user_id = ?'),
 				mistakes: await all('SELECT id, goal_id, topic, note, created_at, fixed_at FROM mistakes WHERE user_id = ? ORDER BY created_at, rowid'),
 				chatMessages: await all('SELECT chat_id, role, content, created_at FROM chat_messages WHERE user_id = ? ORDER BY created_at, rowid')
