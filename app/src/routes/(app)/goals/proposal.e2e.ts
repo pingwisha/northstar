@@ -37,6 +37,11 @@ test('a plan from the AI is only a draft until accepted, and unticked tasks stay
 	await card.getByRole('button', { name: 'Принять план' }).click();
 
 	await expect(card.getByTestId('plan-proposal')).toHaveCount(0);
+	// The accepted plan shows its stages with a percent each.
+	await card.getByText(/Этапы: 2/).click();
+	await expect(card.getByTestId('stage')).toHaveCount(2);
+	await expect(card.getByTestId('stage').first()).toContainText('Основы');
+	await expect(card.getByTestId('stage').first()).toContainText('0%');
 	await page.goto('/calendar');
 	await expect(page.getByText('Лишняя задача')).toHaveCount(0);
 	await page.goto('/');

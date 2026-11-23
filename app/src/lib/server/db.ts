@@ -46,6 +46,15 @@ export interface GoalTaskRow {
 	weight: number;
 	completed_at: string | null;
 	note: string | null;
+	// The stage the task belongs to; null for tasks the person added by hand.
+	stage_id: string | null;
+}
+
+export interface StageRow {
+	id: string;
+	goal_id: string;
+	title: string;
+	due_date: string | null;
 }
 
 export interface ChatMessageRow {
@@ -178,10 +187,15 @@ export function scoped(db: D1Database, userId: string) {
 			return (await db.prepare('SELECT * FROM goals WHERE user_id = ? ORDER BY deadline, created_at, rowid').bind(userId).all<GoalRow>()).results;
 		},
 
+		// The stages of every goal in plan order.
+		async listStages(): Promise<StageRow[]> {
+			return (await db.prepare('SELECT id, goal_id, title, due_date FROM stages WHERE user_id = ? ORDER BY goal_id, position').bind(userId).all<StageRow>()).results;
+		},
+
 		async listGoalTasks(): Promise<GoalTaskRow[]> {
 			return (
 				await db
-					.prepare('SELECT id, goal_id, title, planned_for, weight, completed_at, note FROM tasks WHERE user_id = ? ORDER BY planned_for, created_at, rowid')
+					.prepare('SELECT id, goal_id, stage_id, title, planned_for, weight, completed_at, note FROM tasks WHERE user_id = ? ORDER BY planned_for, created_at, rowid')
 					.bind(userId)
 					.all<GoalTaskRow>()
 			).results;

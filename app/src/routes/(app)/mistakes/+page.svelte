@@ -14,7 +14,7 @@
 		<h1 class="text-3xl font-semibold">Тетрадь ошибок</h1>
 		<button type="button" class="h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground" onclick={() => (adding = !adding)} aria-expanded={adding}>Записать ошибку</button>
 	</div>
-	<p class="text-sm text-muted-foreground">Записывай, где ошиблась, и отмечай исправленное. Повторяющиеся темы покажут, куда смотреть в первую очередь.</p>
+	<p class="text-sm text-muted-foreground">Записывай, где ошиблась, и отмечай исправленное. Повторяющиеся темы покажут, куда смотреть в первую очередь. Не знаешь, где слабое место? <a href="/check" class="text-primary underline underline-offset-2">Проверь себя вопросами от ИИ</a>.</p>
 
 	{#if adding || (form?.action === 'add' && form.message)}
 		{#if data.goals.length === 0}

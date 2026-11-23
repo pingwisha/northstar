@@ -99,6 +99,25 @@
 					{/if}
 				{/if}
 
+				{#if (data.stagesByGoal[card.id] ?? []).length > 0}
+					<details class="text-sm" data-testid="stages">
+						<summary class="inline-flex h-10 cursor-pointer items-center rounded-md border px-3">Этапы: {data.stagesByGoal[card.id].length}</summary>
+						<ol class="mt-2 flex flex-col gap-3">
+							{#each data.stagesByGoal[card.id] as stage, i (stage.id)}
+								<li class="flex flex-col gap-1" data-testid="stage">
+									<div class="flex flex-wrap items-baseline justify-between gap-x-3">
+										<span class="min-w-0 font-medium">{i + 1}. {stage.title}</span>
+										<span class="text-muted-foreground">{stage.percent}%, {stage.done} из {stage.total}{stage.dueDate ? `, до ${formatDate(stage.dueDate)}` : ''}</span>
+									</div>
+									<div class="h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Этап {stage.title}" aria-valuemin="0" aria-valuemax="100" aria-valuenow={stage.percent}>
+										<div class="h-full rounded-full bg-[var(--goal)]" style="width: {stage.percent}%"></div>
+									</div>
+								</li>
+							{/each}
+						</ol>
+					</details>
+				{/if}
+
 				{#if editing === card.id}
 					<form method="POST" action="?/look" use:enhance class="flex flex-col gap-2">
 						<input type="hidden" name="id" value={card.id} />
@@ -252,6 +271,7 @@
 			</ul>
 		</section>
 	{/if}
+	<p class="text-sm text-muted-foreground">Хочешь понять, что уже усвоено? <a href="/check" class="text-primary underline underline-offset-2">Проверь себя вопросами от ИИ</a>.</p>
 </main>
 
 {#snippet proposalView(goalId: string, proposal: (typeof data.proposals)[number])}

@@ -8,7 +8,7 @@ import { buildWeekly, numbersAreKnown, weeklyContext } from '$lib/weekly';
 import type { Actions, PageServerLoad } from './$types';
 
 const MESSAGES = {
-	not_available: 'ИИ пока доступен только владельцу сайта.',
+	not_available: 'Эта функция пока недоступна.',
 	not_configured: 'ИИ ещё не подключён: нет ключа.',
 	limit_reached: 'На сегодня лимит запросов к ИИ исчерпан. Попробуй завтра.',
 	service_busy: 'Сегодня ИИ слишком загружен. Попробуй завтра.',

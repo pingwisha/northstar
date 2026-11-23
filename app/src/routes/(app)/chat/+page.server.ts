@@ -12,7 +12,7 @@ const MAX_QUESTION = 2000;
 const HISTORY = 20;
 
 const MESSAGES = {
-	not_available: 'ИИ пока доступен только владельцу сайта.',
+	not_available: 'Эта функция пока недоступна.',
 	not_configured: 'ИИ ещё не подключён: нет ключа.',
 	limit_reached: 'На сегодня лимит запросов к ИИ исчерпан. Попробуй завтра.',
 	service_busy: 'Сегодня ИИ слишком загружен. Попробуй завтра.',

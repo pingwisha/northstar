@@ -1,7 +1,7 @@
 // Building and saving a plan: the AI is replaced by a stand-in, the database is real.
 import type { Miniflare } from 'miniflare';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { actions } from '../src/routes/(app)/goals/+page.server';
+import { actions, load } from '../src/routes/(app)/goals/+page.server';
 import { scoped } from '../src/lib/server/db';
 import { addMaterials, generatePlan, verifyLinks } from '../src/lib/server/plan';
 import { AI_BASE_URL, usedToday } from '../src/lib/server/ai';
@@ -186,6 +186,18 @@ describe('the plan action', () => {
 		expect(await call('acceptPlan', 'o', 'owner', id)).toMatchObject({ ok: true });
 		expect(await tasksOf('o')).toHaveLength(3);
 		expect(await scoped(db, 'o').listDrafts()).toHaveLength(0);
+	});
+
+	it('shows the progress of each stage once the plan is accepted', async () => {
+		vi.stubGlobal('fetch', web());
+		const id = await scoped(db, 'o').addGoal({ ...goal, deadline: '2030-01-01' }, '2026-11-18');
+		await run('o', 'owner', id);
+		await call('acceptPlan', 'o', 'owner', id);
+		const first = (await tasksOf('o')).find((t) => t.title === 'Прочитать главу 1')!;
+		await scoped(db, 'o').setTaskCompleted(first.id, true);
+		const data = (await load({ locals: { userId: 'o', role: 'owner' }, platform: { env: env() } } as unknown as Parameters<NonNullable<typeof load>>[0])) as { stagesByGoal: Record<string, { title: string; percent: number; done: number; total: number }[]> };
+		// Stage one has tasks of weight 1 and 2, stage two one task of weight 3.
+		expect(data.stagesByGoal[id].map((s) => [s.title, s.done, s.total, s.percent])).toEqual([['Основы', 1, 2, 33], ['Практика', 0, 1, 0]]);
 	});
 
 	it('leaves out the tasks the person unticked and drops a stage left empty', async () => {

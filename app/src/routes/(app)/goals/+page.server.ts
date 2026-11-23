@@ -4,6 +4,7 @@ import { ALL_DAYS, MAX_ACTIVE_GOALS, parseDeadline, parseNewGoal, parseStudyDays
 import { colorOf, isGoalIcon, nextColor, parseLook } from '$lib/goal-look';
 import { scoped } from '$lib/server/db';
 import { replan, schedulePlan, type PlanStage } from '$lib/plan';
+import { buildStages } from '$lib/stages';
 import { daysUntil } from '$lib/progress';
 import { generatePlan, type PlanError } from '$lib/server/plan';
 import { appEnv } from '$lib/server/env';
@@ -19,14 +20,18 @@ async function mine(locals: App.Locals, platform: App.Platform | undefined) {
 export const load: PageServerLoad = async ({ locals, platform }) => {
 	const me = await mine(locals, platform);
 	const today = todayIso(undefined, locals.timezone);
-	const [goals, tasks, drafts] = await Promise.all([me.listGoals(), me.listGoalTasks(), me.listDrafts()]);
+	const [goals, tasks, drafts, stages] = await Promise.all([me.listGoals(), me.listGoalTasks(), me.listDrafts(), me.listStages()]);
 	// A proposed plan is shown dated from today, so a draft left for a few days is never stale.
 	const proposals = drafts.flatMap((d) => {
 		const goal = goals.find((g) => g.id === d.goalId && g.status === 'active');
 		if (!goal || daysUntil(today, goal.deadline) < 0 || tasks.some((t) => t.goal_id === goal.id)) return [];
 		return [{ goalId: goal.id, missing: d.missing, stages: previewStages(d.stages, today, goal.deadline, goal.study_days) }];
 	});
-	return { today, ...buildCards(goals, tasks, today), proposals };
+	// Progress of each stage, for the goals that have a plan.
+	const stagesByGoal = Object.fromEntries(
+		goals.map((g) => [g.id, buildStages(stages.filter((s) => s.goal_id === g.id), tasks.filter((t) => t.goal_id === g.id))])
+	);
+	return { today, ...buildCards(goals, tasks, today), proposals, stagesByGoal };
 };
 
 // The proposed plan as the page shows it: every task has a flat number the person can untick.
@@ -40,7 +45,7 @@ function previewStages(stages: PlanStage[], today: string, deadline: string, stu
 }
 
 const PLAN_MESSAGES: Record<PlanError, string> = {
-	not_available: 'Этот помощник пока доступен только владельцу сайта.',
+	not_available: 'Эта функция пока недоступна.',
 	not_configured: 'ИИ ещё не подключён: нет ключа.',
 	limit_reached: 'На сегодня твой лимит запросов к ИИ исчерпан. Попробуй завтра.',
 	service_busy: 'Сегодня ИИ слишком загружен у всех. Попробуй завтра или добавь задачи вручную.',
