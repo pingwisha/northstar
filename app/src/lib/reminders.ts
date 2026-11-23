@@ -37,9 +37,11 @@ export interface Subscription {
 	lastSentOn: string | null;
 }
 
-// A reminder is due in its hour, and only once per local day.
+// A reminder is due from its hour for the next two hours (so a busy hour can spill over), and only once per local day.
+export const DUE_WINDOW_HOURS = 3;
 export function isDue(sub: Subscription, now: Date): boolean {
-	return localHour(now, sub.timezone) === sub.hour && sub.lastSentOn !== todayIso(now, sub.timezone);
+	const late = (localHour(now, sub.timezone) - sub.hour + 24) % 24;
+	return late < DUE_WINDOW_HOURS && sub.lastSentOn !== todayIso(now, sub.timezone);
 }
 
 // The text of a reminder, from the counts of tasks not done yet. Null when there is nothing to say:

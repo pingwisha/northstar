@@ -42,6 +42,13 @@ describe('isDue', () => {
 		expect(isDue({ timezone: 'UTC', hour: 15, lastSentOn: null }, at)).toBe(false);
 	});
 
+	it('stays due for two more hours, so a busy hour can spill over, but not before or after', () => {
+		expect(isDue({ timezone: 'UTC', hour: 5, lastSentOn: null }, at)).toBe(true);
+		expect(isDue({ timezone: 'UTC', hour: 4, lastSentOn: null }, at)).toBe(true);
+		expect(isDue({ timezone: 'UTC', hour: 3, lastSentOn: null }, at)).toBe(false);
+		expect(isDue({ timezone: 'UTC', hour: 7, lastSentOn: null }, at)).toBe(false);
+	});
+
 	it('sends once per local day', () => {
 		expect(isDue({ timezone: 'UTC', hour: 6, lastSentOn: '2026-11-23' }, at)).toBe(false);
 		expect(isDue({ timezone: 'UTC', hour: 6, lastSentOn: '2026-11-22' }, at)).toBe(true);
