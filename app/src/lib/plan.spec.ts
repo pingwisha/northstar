@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_TASKS, parseMaterials, parsePlan, replan, schedulePlan, snapToStudyDay, spreadDates, targetTaskCount, type PlanStage } from './plan';
+import { MAX_TASKS, parseMaterials, parsePlan, replan, schedulePlan, snapToStudyDay, spreadDates, targetTaskCount, withSearchLinks, type PlanStage, type PlanTask } from './plan';
 import { daysUntil } from './progress';
 
 const task = (title: string, weight = 1) => ({ title, weight, materials: [] });
@@ -166,5 +166,27 @@ describe('study days', () => {
 
 	it('changes nothing when every day is a study day', () => {
 		expect(spreadDates([1, 1, 1], '2026-11-20', '2026-12-20')).toEqual(spreadDates([1, 1, 1], '2026-11-20', '2026-12-20', 127));
+	});
+});
+
+describe('search links for tasks without a page', () => {
+	const stage = (materials: PlanTask['materials']): PlanStage[] => [{ title: 'Этап', tasks: [{ title: 'Решить задачи', weight: 1, materials }] }];
+
+	it('adds a working search address to a task with no link', () => {
+		const [s] = withSearchLinks('Сдать ОГЭ', stage([]));
+		const m = s.tasks[0].materials;
+		expect(m).toHaveLength(1);
+		expect(m[0].url).toBe('https://www.google.com/search?q=' + encodeURIComponent('Решить задачи Сдать ОГЭ'));
+	});
+
+	it('searches by the hint when the AI gave one instead of a link', () => {
+		const [s] = withSearchLinks('Сдать ОГЭ', stage([{ kind: 'article', title: 'Учебник', url: null, source: 'сайт ФИПИ' }]));
+		expect(s.tasks[0].materials).toHaveLength(2);
+		expect(s.tasks[0].materials[1].url).toContain(encodeURIComponent('сайт ФИПИ'));
+	});
+
+	it('leaves a task that already has a real link alone', () => {
+		const own = [{ kind: 'article' as const, title: 'Статья', url: 'https://example.com/a', source: null }];
+		expect(withSearchLinks('Цель', stage(own))[0].tasks[0].materials).toEqual(own);
 	});
 });

@@ -27,6 +27,7 @@ export interface MaterialData {
 
 export interface HomeTask {
 	id: string;
+	goalId: string;
 	title: string;
 	goalTitle: string;
 	goalColor: string;
@@ -35,6 +36,29 @@ export interface HomeTask {
 	done: boolean;
 	note: string | null;
 	materials: { id: string; own: boolean; kind: MaterialData['kind']; title: string; url: string | null; hint: string | null }[];
+}
+
+// One task as a page shows it, with its goal's look and its materials. Goals of any status.
+export function taskViews(goals: GoalData[], tasks: HomeTaskData[], materials: MaterialData[]): Map<string, HomeTask> {
+	const byGoal = new Map(goals.map((g) => [g.id, g]));
+	const views = new Map<string, HomeTask>();
+	for (const t of tasks) {
+		const g = byGoal.get(t.goal_id);
+		if (!g) continue;
+		views.set(t.id, {
+			id: t.id,
+			goalId: g.id,
+			title: t.title,
+			goalTitle: g.title,
+			goalColor: colorOf(g.color),
+			goalIcon: iconOf(g.icon),
+			plannedFor: t.planned_for,
+			done: t.completed_at !== null,
+			note: t.note ?? null,
+			materials: materials.filter((m) => m.task_id === t.id).map((m) => ({ id: m.id ?? '', own: m.own === 1, kind: m.kind, title: m.title, url: m.url, hint: m.source }))
+		});
+	}
+	return views;
 }
 
 export interface Home {
@@ -57,13 +81,10 @@ const toInput = (t: HomeTaskData): TaskInput => ({ plannedFor: t.planned_for, we
 
 export function buildHome(goals: GoalData[], tasks: HomeTaskData[], today: string, materials: MaterialData[] = [], timeZone?: string): Home {
 	const active = goals.filter((g) => g.status === 'active');
-	const titles = new Map(active.map((g) => [g.id, g.title]));
-	const looks = new Map(active.map((g) => [g.id, { color: colorOf(g.color), icon: iconOf(g.icon) }]));
-	const mine = tasks.filter((t) => titles.has(t.goal_id));
-	const view = (t: HomeTaskData): HomeTask => ({ id: t.id, title: t.title, goalTitle: titles.get(t.goal_id)!, goalColor: looks.get(t.goal_id)!.color, goalIcon: looks.get(t.goal_id)!.icon, plannedFor: t.planned_for, done: t.completed_at !== null,
-		note: t.note ?? null,
-		materials: materials.filter((m) => m.task_id === t.id).map((m) => ({ id: m.id ?? '', own: m.own === 1, kind: m.kind, title: m.title, url: m.url, hint: m.source }))
-	});
+	const ids = new Set(active.map((g) => g.id));
+	const mine = tasks.filter((t) => ids.has(t.goal_id));
+	const views = taskViews(active, mine, materials);
+	const view = (t: HomeTaskData): HomeTask => views.get(t.id)!;
 
 	const nearest = [...active].sort((a, b) => a.deadline.localeCompare(b.deadline))[0];
 	return {

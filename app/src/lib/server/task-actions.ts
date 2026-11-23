@@ -2,7 +2,7 @@
 // behave the same. The person comes only from the verified session set by hooks.server.ts.
 import { error, fail, type RequestEvent } from '@sveltejs/kit';
 import { todayIso } from '$lib/goals';
-import { MAX_OWN_MATERIALS, parseMaterialLink, parseNote } from '$lib/materials';
+import { MAX_OWN_MATERIALS, parseNote, parseOwnMaterial } from '$lib/materials';
 import { MAX_TASKS_TOTAL, parseOneTitle, parseTaskDay, parseTaskTitles } from '$lib/tasks';
 import { scoped } from './db';
 import { appEnv } from './env';
@@ -81,9 +81,9 @@ export const taskActions = {
 		const me = await mine(event);
 		const data = await event.request.formData();
 		const taskId = field(data, 'id');
-		const link = parseMaterialLink(field(data, 'title'), field(data, 'url'));
+		const link = parseOwnMaterial(field(data, 'title'), field(data, 'url'));
 		if (!link.ok) return fail(400, { action: 'addMaterial', taskId, message: link.message });
-		if ((await me.countOwnMaterials(taskId)) >= MAX_OWN_MATERIALS) return fail(400, { action: 'addMaterial', taskId, message: `К одной задаче можно добавить до ${MAX_OWN_MATERIALS} своих ссылок.` });
+		if ((await me.countOwnMaterials(taskId)) >= MAX_OWN_MATERIALS) return fail(400, { action: 'addMaterial', taskId, message: `К одной задаче можно добавить до ${MAX_OWN_MATERIALS} своих материалов.` });
 		if (!(await me.addOwnMaterial(taskId, link.value.title, link.value.url))) return fail(404, { action: 'addMaterial', taskId, message: NO_TASK });
 		return { action: 'addMaterial', ok: true };
 	},

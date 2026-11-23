@@ -24,6 +24,15 @@ export function parseMaterialLink(titleRaw: string, urlRaw: string): Checked<{ t
 	return { ok: true, value: { title, url: url.href } };
 }
 
+// An own material is a link, or just a few words (a book, a page number, a site to look at).
+export function parseOwnMaterial(titleRaw: string, urlRaw: string): Checked<{ title: string; url: string | null }> {
+	if (urlRaw.trim()) return parseMaterialLink(titleRaw, urlRaw);
+	const title = titleRaw.replace(/\s+/g, ' ').trim();
+	if (!title) return { ok: false, message: 'Напиши, что за материал, или вставь ссылку.' };
+	if (title.length > MAX_MATERIAL_TITLE) return { ok: false, message: `Название длиннее ${MAX_MATERIAL_TITLE} знаков.` };
+	return { ok: true, value: { title, url: null } };
+}
+
 // An empty note clears it.
 export function parseNote(raw: string): Checked<string | null> {
 	const note = raw.replace(/\r\n/g, '\n').trim();

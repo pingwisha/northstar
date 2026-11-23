@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseMaterialLink, parseNote } from './materials';
+import { parseMaterialLink, parseNote, parseOwnMaterial } from './materials';
 
 describe('parseMaterialLink', () => {
 	it('keeps an https link and the given title', () => {
@@ -22,5 +22,19 @@ describe('parseNote', () => {
 		expect(parseNote('  привет\n ')).toEqual({ ok: true, value: 'привет' });
 		expect(parseNote('   ')).toEqual({ ok: true, value: null });
 		expect(parseNote('а'.repeat(1001)).ok).toBe(false);
+	});
+});
+
+describe('parseOwnMaterial', () => {
+	it('keeps a link like parseMaterialLink does', () => {
+		expect(parseOwnMaterial('Шпаргалка', 'https://example.com/a')).toEqual({ ok: true, value: { title: 'Шпаргалка', url: 'https://example.com/a' } });
+		expect(parseOwnMaterial('x', 'http://example.com')).toMatchObject({ ok: false });
+	});
+	it('accepts a few words with no link', () => {
+		expect(parseOwnMaterial('  Задачник,   страница 45 ', '')).toEqual({ ok: true, value: { title: 'Задачник, страница 45', url: null } });
+	});
+	it('needs a title or a link, and a short title', () => {
+		expect(parseOwnMaterial('', '  ')).toMatchObject({ ok: false });
+		expect(parseOwnMaterial('я'.repeat(121), '')).toMatchObject({ ok: false });
 	});
 });

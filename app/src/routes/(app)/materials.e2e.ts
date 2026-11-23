@@ -27,18 +27,32 @@ test('a person adds a note and their own link to a task and removes the link', a
 	// A plain http link is refused with a reason.
 	await page.getByLabel(/Ссылка \(https/).evaluate((el: HTMLInputElement) => { el.type = 'text'; });
 	await page.getByLabel(/Ссылка \(https/).fill('http://example.com');
-	await page.getByRole('button', { name: 'Добавить ссылку' }).click();
+	await page.getByRole('button', { name: 'Добавить материал' }).click();
 	await expect(page.getByRole('alert')).toContainText('https://');
 
 	await page.getByLabel(/Ссылка \(https/).fill('https://example.com/mine');
-	await page.getByLabel(/Подпись ссылки/).fill('Моя шпаргалка');
-	await page.getByRole('button', { name: 'Добавить ссылку' }).click();
+	await page.getByLabel(/Название или описание/).fill('Моя шпаргалка');
+	await page.getByRole('button', { name: 'Добавить материал' }).click();
 	const link = page.getByTestId('materials').getByRole('link', { name: 'Моя шпаргалка' });
 	await expect(link).toHaveAttribute('href', 'https://example.com/mine');
 
+	// A material may be just words, with no link.
+	await page.getByLabel(/Ссылка \(https/).fill('');
+	await page.getByLabel(/Название или описание/).fill('Задачник, страница 45');
+	await page.getByRole('button', { name: 'Добавить материал' }).click();
+	await expect(page.getByTestId('materials')).toContainText('Задачник, страница 45');
+	await page.getByRole('button', { name: 'Убрать материал: Задачник, страница 45' }).click();
+	await expect(page.getByTestId('materials')).not.toContainText('Задачник, страница 45');
+
 	// The planned link has no remove button; the own one does.
-	await expect(page.getByRole('button', { name: /Убрать ссылку: Учебник/ })).toHaveCount(0);
-	await page.getByRole('button', { name: 'Убрать ссылку: Моя шпаргалка' }).click();
+	await expect(page.getByRole('button', { name: /Убрать материал: Учебник/ })).toHaveCount(0);
+	await page.getByRole('button', { name: 'Убрать материал: Моя шпаргалка' }).click();
 	await expect(page.getByTestId('materials').getByRole('link', { name: 'Моя шпаргалка' })).toHaveCount(0);
 	await expect(page.getByTestId('materials').getByRole('link', { name: 'Учебник от ИИ' })).toBeVisible();
+
+	// The goal page lists the task with its note and materials.
+	await page.goto('/goals/mt-g');
+	await expect(page.getByTestId('goal-title')).toContainText('Выучить Python');
+	await expect(page.getByTestId('goal-own-tasks')).toContainText('Прочитать главу');
+	await expect(page.getByTestId('note')).toHaveText('Читать после обеда');
 });

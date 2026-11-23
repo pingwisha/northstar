@@ -78,6 +78,20 @@ export function buildMaterialsMessages(goal: { title: string }, stage: PlanStage
 	];
 }
 
+// A web search is always a working address, so a task the AI found no real page for still gets somewhere to start.
+export function searchMaterial(goalTitle: string, taskTitle: string, hint: string | null): PlanMaterial {
+	const query = `${hint ?? taskTitle} ${goalTitle}`.replace(/\s+/g, ' ').trim().slice(0, 150);
+	return { kind: 'other', title: `Найти в поиске: ${taskTitle}`.slice(0, MAX_TITLE + 40), url: `https://www.google.com/search?q=${encodeURIComponent(query)}`, source: null };
+}
+
+// Every task keeps what the AI found; one with no working page also gets the search link.
+export function withSearchLinks(goalTitle: string, stages: PlanStage[]): PlanStage[] {
+	return stages.map((s) => ({
+		...s,
+		tasks: s.tasks.map((t) => (t.materials.some((m) => m.url) ? t : { ...t, materials: [...t.materials, searchMaterial(goalTitle, t.title, t.materials.find((m) => m.source)?.source ?? null)] }))
+	}));
+}
+
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const text = (v: unknown, max: number): string => (typeof v === 'string' ? plainText(v).slice(0, max).trim() : '');
 

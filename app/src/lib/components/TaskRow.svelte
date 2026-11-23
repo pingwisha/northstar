@@ -30,7 +30,7 @@
 		</form>
 		<div class="flex min-w-0 flex-1 flex-col">
 			<span class={task.done ? 'text-muted-foreground line-through' : ''}>{task.title}</span>
-			<span class="goal-{task.goalColor} mt-0.5 inline-flex items-center gap-1.5 self-start text-xs text-muted-foreground" data-testid="task-goal"><span class="inline-block size-2 rounded-full bg-[var(--goal)]"></span>{task.goalIcon} {task.goalTitle}</span>
+			<a href="/goals/{task.goalId}" class="goal-{task.goalColor} mt-0.5 inline-flex items-center gap-1.5 self-start text-xs text-muted-foreground hover:underline" data-testid="task-goal"><span class="inline-block size-2 rounded-full bg-[var(--goal)]"></span>{task.goalIcon} {task.goalTitle}</a>
 			{#if task.note}
 				<p class="mt-2 whitespace-pre-line rounded-md bg-muted px-3 py-2 text-sm" data-testid="note">{task.note}</p>
 			{/if}
@@ -42,7 +42,7 @@
 							{#if m.url}
 								<a href={m.url} target="_blank" rel="noopener noreferrer" class="text-primary underline underline-offset-2">{m.title}</a>{#if m.own}<span class="text-muted-foreground"> (моя)</span>{/if}
 							{:else}
-								{m.title}{#if m.hint}<span class="text-muted-foreground">. Где искать: {m.hint}</span>{/if}
+								{m.title}{#if m.own}<span class="text-muted-foreground"> (моё)</span>{/if}{#if m.hint}<span class="text-muted-foreground">. Где искать: {m.hint}</span>{/if}
 							{/if}
 						</li>
 					{/each}
@@ -98,27 +98,27 @@
 			</form>
 
 			<div class="flex flex-col gap-2 border-t pt-3" data-testid="own-materials">
-				<p class="text-sm font-medium">Мои ссылки</p>
+				<p class="text-sm font-medium">Мои материалы</p>
 				{#each task.materials.filter((m) => m.own) as m (m.id)}
 					<form method="POST" action={act('deleteMaterial')} use:enhance class="flex items-center gap-2 text-sm">
 						<input type="hidden" name="materialId" value={m.id} />
 						<span class="min-w-0 flex-1 truncate">{m.title}</span>
-						<button type="submit" class="h-11 shrink-0 rounded-md border px-3 text-destructive" aria-label={`Убрать ссылку: ${m.title}`}>Убрать</button>
+						<button type="submit" class="h-11 shrink-0 rounded-md border px-3 text-destructive" aria-label={`Убрать материал: ${m.title}`}>Убрать</button>
 					</form>
 				{/each}
 				<form method="POST" action={act('addMaterial')} use:enhance class="flex flex-col gap-2">
 					<input type="hidden" name="id" value={task.id} />
 					<label class="flex flex-col gap-1 text-sm">
-						Ссылка (https://…)
-						<input name="url" type="url" required inputmode="url" class="h-11 rounded-md border bg-background px-3" />
+						Ссылка (https://…, можно пропустить)
+						<input name="url" type="url" inputmode="url" class="h-11 rounded-md border bg-background px-3" />
 					</label>
 					<label class="flex flex-col gap-1 text-sm">
-						Подпись ссылки (можно пропустить)
+						Название или описание (обязательно, если нет ссылки)
 						<input name="title" maxlength="120" class="h-11 rounded-md border bg-background px-3" />
 					</label>
-					<button type="submit" class="h-11 rounded-md border px-4 text-sm font-medium">Добавить ссылку</button>
+					<button type="submit" class="h-11 rounded-md border px-4 text-sm font-medium">Добавить материал</button>
 				</form>
-				<p class="text-xs text-muted-foreground">Заметку и свои ссылки видит и ИИ в чате. Ссылки от ИИ здесь менять нельзя.</p>
+				<p class="text-xs text-muted-foreground">Заметку и свои материалы видит и ИИ в чате. Материалы от ИИ здесь менять нельзя.</p>
 			</div>
 
 			{#if confirmDelete}

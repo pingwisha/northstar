@@ -219,7 +219,7 @@ export function scoped(db: D1Database, userId: string) {
 			return (await db.prepare('SELECT COUNT(*) AS n FROM materials WHERE user_id = ? AND task_id = ? AND own = 1').bind(userId, taskId).first<{ n: number }>())!.n;
 		},
 
-		async addOwnMaterial(taskId: string, title: string, url: string): Promise<boolean> {
+		async addOwnMaterial(taskId: string, title: string, url: string | null): Promise<boolean> {
 			if (!(await this.taskIsOpen(taskId))) return false;
 			await db
 				.prepare("INSERT INTO materials (id, user_id, task_id, kind, title, url, source, own) VALUES (?, ?, ?, 'other', ?, ?, NULL, 1)")

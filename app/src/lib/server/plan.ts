@@ -1,6 +1,6 @@
 // Building a plan with the AI: ask, read the answer, check the links, set the dates.
 import { daysUntil } from '../progress';
-import { buildMaterialsMessages, buildPlanMessages, parseMaterials, parsePlan, schedulePlan, targetTaskCount, type PlanStage, type ScheduledStage } from '../plan';
+import { buildMaterialsMessages, buildPlanMessages, parseMaterials, parsePlan, schedulePlan, targetTaskCount, withSearchLinks, type PlanStage, type ScheduledStage } from '../plan';
 import { askAi, type AiCaller, type AiEnv } from './ai';
 
 const PLAN_TIMEOUT_MS = 90_000;
@@ -81,7 +81,7 @@ export async function generatePlan(
 		const parsed = parsePlan(answer.content);
 		if (!parsed.ok) continue;
 		const withMaterials = await addMaterials(env, caller, goal, parsed.stages, deps.fetch);
-		const checked = await verifyLinks(withMaterials.stages, deps.fetch);
+		const checked = withSearchLinks(goal.title, await verifyLinks(withMaterials.stages, deps.fetch));
 		return { ok: true, stages: schedulePlan(checked, today, goal.deadline, goal.study_days), draft: checked, missingMaterials: withMaterials.missing };
 	}
 	return { ok: false, error: 'bad_answer' };

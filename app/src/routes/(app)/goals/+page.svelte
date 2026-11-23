@@ -77,7 +77,7 @@
 			{#if form?.action === 'add' && form.message}
 				<p role="alert" class="text-sm text-destructive">{form.message}</p>
 			{/if}
-			<button type="submit" disabled={creating} class="h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-60">{creating ? 'Создаю цель, ИИ строит план: это займёт до минуты…' : 'Создать цель и план'}</button>
+			<button type="submit" disabled={creating} class="h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-60">{creating ? 'Создаю цель, ИИ строит план: это займёт 2-3 минуты, не закрывай страницу…' : 'Создать цель и план'}</button>
 		</form>
 	{/if}
 
@@ -91,7 +91,7 @@
 				<div class="flex items-center gap-4">
 					<ProgressRing percent={card.percent} label={card.title} color="var(--goal)" />
 					<div class="flex min-w-0 flex-col gap-1">
-						<h2 class="text-lg font-semibold"><span aria-hidden="true">{card.icon}</span> {card.title}</h2>
+						<h2 class="text-lg font-semibold"><a href="/goals/{card.id}" class="hover:underline" data-testid="goal-link"><span aria-hidden="true">{card.icon}</span> {card.title}</a></h2>
 						<p class="text-sm text-muted-foreground">До {formatDate(card.deadline)}, {card.daysLabel}</p>
 						<p class="text-sm font-medium {paceClass[card.pace.state]}">{card.pace.label[0].toUpperCase() + card.pace.label.slice(1)}</p>
 					</div>
@@ -106,6 +106,10 @@
 						все задачи сделаны
 					{/if}
 				</p>
+
+				{#if card.taskCount > 0}
+					<a href="/goals/{card.id}" class="inline-flex h-10 items-center self-start rounded-md border px-3 text-sm" data-testid="open-goal">Все задачи цели ({card.taskCount})</a>
+				{/if}
 
 				{#if editing === card.id}
 					<form method="POST" action="?/deadline" use:enhance={() => async ({ update, result }) => { await update(); if (result.type === 'success') editing = null; }} class="flex flex-col gap-2 sm:flex-row">
@@ -189,7 +193,7 @@
 							disabled={planning !== null}
 							class="h-11 w-full rounded-md px-4 text-sm font-medium disabled:opacity-60 {proposal ? 'border' : 'bg-primary text-primary-foreground'}"
 						>
-							{planning === card.id ? 'ИИ строит план, это займёт до минуты…' : proposal ? 'Предложить другой план (ещё один запрос к ИИ)' : 'Построить план'}
+							{planning === card.id ? 'ИИ строит план, это займёт 2-3 минуты…' : proposal ? 'Предложить другой план (ещё один запрос к ИИ)' : 'Построить план'}
 						</button>
 					</form>
 					{#if form?.action === 'plan' && form.goalId === card.id && 'message' in form && form.message}

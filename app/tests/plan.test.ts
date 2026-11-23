@@ -100,7 +100,9 @@ describe('generatePlan', () => {
 		const r = await generatePlan(env(), owner, goal, '2026-11-18', { fetch: web(JSON.stringify(aiPlan), (stage) => (stage === 'Практика' ? 'не json' : JSON.stringify(materialsFor[stage]))) as unknown as typeof fetch });
 		if (!r.ok) throw new Error(r.error);
 		expect(r.stages.flatMap((s) => s.tasks)).toHaveLength(3);
-		expect(r.stages[1].tasks[0].materials).toEqual([]);
+		// A stage with no materials from the AI still gets a search link for each task.
+		expect(r.stages[1].tasks[0].materials).toHaveLength(1);
+		expect(r.stages[1].tasks[0].materials[0].url).toContain('https://www.google.com/search?q=');
 		expect(r.stages[0].tasks[0].materials.length).toBeGreaterThan(0);
 	});
 
