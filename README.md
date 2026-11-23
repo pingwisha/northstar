@@ -1,3 +1,8 @@
-# Northstart (repo and address still northstar)
+# Northstart (репозиторий и адрес по-прежнему называются northstar)
 
-Личный проджект-менеджер для больших целей. Описание этапа 1: docs/stage-1.md. План: docs/plan-stage-1.md.
+Личный проджект-менеджер для больших целей: цель и срок, план по дням, честный прогресс и ИИ-помощник.
+
+- Сайт: https://northstar-5gb.pages.dev
+- Актуальное поведение системы: openspec/specs/ (по одной папке на возможность).
+- История решений: docs/stage-1.md, docs/stage-2.md, планы docs/plan-stage-*.md.
+- Запуск и проверки из папки app/: npm run dev, npm run check, npx vitest run, npx playwright test.

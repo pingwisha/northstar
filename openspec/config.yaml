@@ -1,0 +1,80 @@
+schema: spec-driven
+
+context: |
+  Language: ru
+  All artifacts must be written in ru.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+
+  Проект: Northstart (репозиторий и адрес по-прежнему называются northstar).
+  Это личный менеджер больших целей. Человек называет цель и срок, получает этапы и задачи на
+  каждый день, отмечает сделанное и видит честный процент (считается только по его отметкам).
+  ИИ-помощник строит план, отвечает в чате, задаёт проверочные вопросы и комментирует неделю.
+  Интерфейс русский; публичные страницы (описание, конфиденциальность, условия) двуязычные RU/EN.
+
+  Для кого: сначала для владельца сайта, теперь для любого человека с аккаунтом Google
+  (регистрация открыта переменной SIGNUP=open, есть дневной лимит новых аккаунтов).
+  Владелец не программист: объяснять по шагам, предлагать готовые варианты ответа.
+
+  Стек: SvelteKit 3 и Svelte 5 (руны), Tailwind 4, TypeScript, adapter-cloudflare.
+  Хостинг: Cloudflare Pages, проект northstar, адрес https://northstar-5gb.pages.dev.
+  База: Cloudflare D1 (SQLite), база northstar. Схема лежит в migrations/ (0001..0007),
+  даты хранятся строками YYYY-MM-DD, моменты времени строками ISO 8601 UTC.
+  Вход: только Google OAuth (PKCE) и подписанная cookie сессии (JWT HS256, 30 дней).
+  ИИ: Gemini через OpenAI-совместимый адрес, только с сервера (src/lib/server/ai.ts),
+  основная модель gemini-3.1-flash-lite, запасная gemini-3.5-flash-lite.
+  Секреты (в Cloudflare и в .env, который не коммитится): GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
+  SESSION_SECRET, ALLOWED_EMAILS (владельцы), GEMINI_API_KEY; необязательные: SIGNUP, SIGNUP_DAILY_LIMIT,
+  DAILY_LIMIT, MEMBER_DAILY_LIMIT, MEMBERS_TOTAL_LIMIT, AI_MODEL.
+
+  Где что лежит:
+  - app/src/lib: чистая логика без базы и часов (progress, goals, plan, streak, trials, mistakes, quiz, exam,
+    weekly и другие), рядом файлы *.spec.ts.
+  - app/src/lib/server: всё, что говорит с базой, ИИ и входом (db.ts, ai.ts, plan.ts, auth/).
+  - app/src/routes: страницы; закрытые лежат в группе (app), публичные: welcome, login, privacy, terms.
+  - app/src/hooks.server.ts: проверка входа, перенаправления, заголовок X-Robots-Tag.
+  - migrations/: SQL-миграции по порядку. scripts/backup.sh: копия боевой базы в backups/ (не в git).
+  - docs/: описание этапов, план, идеи.
+
+  Как запускать и тестировать (из папки app/):
+  - npm run dev: локальная разработка; npm run check: типы и svelte-check.
+  - npx vitest run: модульные тесты и тесты на настоящей D1 в Miniflare (tests/, helpers.ts makeDb применяет все миграции).
+  - npx playwright test: браузерные тесты (e2e/support.ts, заранее засеянные люди E2E, один процесс);
+    тяжёлые, на слабом компьютере могут прерваться из-за нехватки памяти.
+
+  Как публикуется: из app/ npm run build, затем
+  wrangler pages deploy .svelte-kit/cloudflare --project-name northstar --branch main.
+  Новая миграция сначала применяется к боевой базе: wrangler d1 migrations apply northstar --remote.
+  Ключи Cloudflare берутся из .env. Резервная копия: scripts/backup.sh; у D1 включён Time Travel.
+
+  Правила владельца:
+  - Всегда отвечать по-русски, простым языком, по шагам.
+  - Каждый ответ заканчивается нумерованным списком «Что нужно сделать тебе» с точным словом, которое отправить дальше.
+  - Ничего платного не покупать (домен не покупается, ИИ с ограничениями для всех).
+  - Данные каждого человека видны только ему; чужие данные никогда не показываются.
+  - Новую работу начинать после слова «продолжай».
+
+rules:
+  proposal:
+    - Указать, какие спецификации в openspec/specs/ затрагиваются и нужна ли миграция базы.
+    - Отдельно написать, что остаётся вне изменения (Out of scope).
+    - Если меняется то, что видит человек, указать русский текст интерфейса и ограничения (длины, лимиты).
+    - Если затрагивается ИИ, указать, как это считается в дневном лимите и что будет без ключа или при отказе поставщика.
+  tasks:
+    - Каждая задача, меняющая данные человека, обязана ограничивать запрос по user_id и иметь тест, где чужой человек получает отказ.
+    - Чистую логику класть в app/src/lib с файлом *.spec.ts, работу с базой и ИИ в app/src/lib/server с тестом в app/tests.
+    - Новая таблица или столбец это новый файл в migrations/ со следующим номером; добавить таблицу в проверки tests/db.test.ts и в exportAll.
+    - В +page.server.ts нельзя экспортировать ничего, кроме load и actions; после нового маршрута выполнить npx svelte-kit sync.
+    - Для видимого изменения добавить или обновить браузерный тест в app/src/routes и проверить телефонную ширину.
+    - Последняя задача любого изменения: npx vitest run, npm run check, затем применить миграции к боевой базе и опубликовать.
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing

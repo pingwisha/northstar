@@ -1,4 +1,4 @@
-# Northstar. План этапа 2
+# Northstart. План этапа 2
 
 Описание: `docs/stage-2.md`. Перед любым шагом прочитай `docs/stage-1.md` и `docs/stage-2.md`. Обозначения те же, что в `docs/plan-stage-1.md`.
 
