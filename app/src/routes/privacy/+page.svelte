@@ -45,10 +45,21 @@
 		<p>Пока пользователь не удалил аккаунт. После удаления данные стираются из базы сразу, копии в резервных архивах могут существовать до нескольких недель.</p>
 
 		<h2 class="text-xl font-semibold">Возраст</h2>
-		<p>Если пользователю нет 14 лет, сайтом лучше пользоваться вместе с родителями: вход идёт через Google-аккаунт, а правила возраста у Google свои.</p>
+		<p>Сайт предназначен для людей от 14 лет. Если пользователю меньше 14, пользоваться сайтом можно только с согласия родителя или законного представителя, который отвечает за аккаунт. Возраст сайт не проверяет: это обязанность пользователя и его родителей. Если станет известно, что аккаунт ведёт ребёнок младше 14 без такого согласия, аккаунт может быть закрыт, а данные удалены.</p>
+
+		<h2 class="text-xl font-semibold">Основание обработки</h2>
+		<p>Данные обрабатываются, чтобы сайт работал: входил в аккаунт, хранил планы и отправлял напоминания, если они включены. Основание: согласие пользователя, которое он даёт, входя через Google и создавая записи. Согласие можно отозвать в любой момент, удалив аккаунт. Данные не используются ни для чего другого.</p>
+
+		<h2 class="text-xl font-semibold">Кто ещё обрабатывает данные</h2>
+		<ul class="list-disc pl-5">
+			<li>Cloudflare: хостинг сайта и база данных.</li>
+			<li>Google: вход в аккаунт и ИИ-помощник Gemini (получает только то, что описано в разделе «ИИ»).</li>
+			<li>Сервис уведомлений браузера (Google, Apple, Mozilla или Microsoft): получает служебный адрес и сигнал, если включены напоминания.</li>
+		</ul>
+		<p>Других получателей у данных нет. Каждый из этих сервисов работает по собственным правилам, которые можно прочитать на его сайте.</p>
 
 		<h2 class="text-xl font-semibold">Права пользователя</h2>
-		<p>После входа на странице «Мои данные» можно скачать всё, что хранит сайт, и удалить аккаунт вместе со всеми данными насовсем.</p>
+		<p>После входа на странице «Мои данные» можно скачать всё, что хранит сайт, и удалить аккаунт вместе со всеми данными насовсем. Исправить записи можно прямо на сайте. Если войти нельзя или нужна помощь, напишите на адрес ниже: запрос на выгрузку, исправление или удаление будет выполнен в течение 30 дней. Жаловаться на обработку данных можно и в надзорный орган своей страны.</p>
 
 		<h2 class="text-xl font-semibold">Связаться</h2>
 		<p>Вопросы, просьбы и сообщения об ошибках: <a href="mailto:northstart.help@gmail.com" class={link}>northstart.help@gmail.com</a></p>
@@ -85,10 +96,21 @@
 		<p>Until you delete your account. After deletion the data is erased from the database at once; copies in backups may exist for up to a few weeks.</p>
 
 		<h2 class="text-xl font-semibold">Age</h2>
-		<p>If you are under 14, use the site together with a parent: sign-in goes through your Google account, and Google has its own age rules.</p>
+		<p>The site is meant for people aged 14 and over. A user under 14 may use it only with the consent of a parent or legal guardian, who is responsible for the account. The site does not verify age: that is up to the user and their parents. If it becomes known that a child under 14 runs an account without such consent, the account may be closed and its data deleted.</p>
+
+		<h2 class="text-xl font-semibold">Why data is processed</h2>
+		<p>Data is processed to make the site work: signing in, keeping plans and sending reminders if they are on. The basis is the user's consent, given by signing in with Google and creating records. Consent can be withdrawn at any time by deleting the account. The data is not used for anything else.</p>
+
+		<h2 class="text-xl font-semibold">Who else processes data</h2>
+		<ul class="list-disc pl-5">
+			<li>Cloudflare: site hosting and the database.</li>
+			<li>Google: sign-in and the Gemini AI helper (it receives only what the "AI" section describes).</li>
+			<li>The browser's push service (Google, Apple, Mozilla or Microsoft): receives the notification address and a signal if reminders are on.</li>
+		</ul>
+		<p>Nobody else receives the data. Each of these services works under its own rules, which are on its website.</p>
 
 		<h2 class="text-xl font-semibold">Your rights</h2>
-		<p>After signing in, the "My data" page lets you download everything the site stores and delete your account with all its data for good.</p>
+		<p>After signing in, the "My data" page lets you download everything the site stores and delete your account with all its data for good. Records can be corrected right on the site. If you cannot sign in or need help, write to the address below: a request to export, correct or delete data will be handled within 30 days. You may also complain to the data protection authority of your country.</p>
 
 		<h2 class="text-xl font-semibold">Contact</h2>
 		<p>Questions, requests and bug reports: <a href="mailto:northstart.help@gmail.com" class={link}>northstart.help@gmail.com</a></p>

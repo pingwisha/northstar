@@ -21,7 +21,8 @@
 		<h2 class="text-xl font-semibold">Как можно пользоваться</h2>
 		<ul class="list-disc pl-5">
 			<li>Сайт для личных целей и учёбы. Бесплатный.</li>
-			<li>Вход только через твой Google-аккаунт. За свой аккаунт отвечаешь ты.</li>
+			<li>Сайт для людей от 14 лет; младше 14 только с согласия родителя, подробнее в Конфиденциальности.</li>
+				<li>Вход только через твой Google-аккаунт. За свой аккаунт отвечаешь ты.</li>
 			<li>Нельзя пытаться получить чужие данные, ломать сайт или перегружать его запросами. Такие аккаунты могут быть закрыты.</li>
 			<li>Нельзя хранить на сайте то, что запрещено законом, и чужие личные данные.</li>
 		</ul>
@@ -47,7 +48,8 @@
 		<h2 class="text-xl font-semibold">How you may use it</h2>
 		<ul class="list-disc pl-5">
 			<li>The site is for personal goals and study. It is free.</li>
-			<li>You sign in only with your own Google account, and you are responsible for it.</li>
+			<li>The site is for people aged 14 and over; under 14 only with a parent's consent, see Privacy.</li>
+				<li>You sign in only with your own Google account, and you are responsible for it.</li>
 			<li>Do not try to get other people's data, break the site or overload it with requests. Such accounts may be closed.</li>
 			<li>Do not store anything on the site that is forbidden by law, or other people's personal data.</li>
 		</ul>
