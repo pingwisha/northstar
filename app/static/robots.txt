@@ -6,4 +6,4 @@ Allow: /privacy
 Allow: /terms
 Disallow: /
 
-Sitemap: https://northstar-5gb.pages.dev/sitemap.xml
+Sitemap: https://northstar-5gb.pages.dev/sitemap-pages.xml

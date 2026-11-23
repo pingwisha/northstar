@@ -9,7 +9,6 @@
 	const QUICK = [
 		{ label: 'Что делать сегодня?', text: 'Что мне делать сегодня?' },
 		{ label: 'План на неделю', text: 'Дай план на ближайшую неделю по моим задачам: по дням, коротко.' },
-		{ label: 'Проверь меня', text: 'Задай мне три коротких вопроса, чтобы проверить, что я усвоила ближайшую задачу. По одному, жди моего ответа.' },
 		{ label: 'Объясни проще', text: 'Объясни свой последний ответ проще, короткими фразами и на примере.', needsHistory: true },
 		{ label: 'Итог недели', text: 'Подведи итог моей недели по цифрам из моих целей и скажи, на что обратить внимание.' }
 	] as { label: string; text: string; needsHistory?: boolean }[];
@@ -59,6 +58,7 @@
 					<button type="submit" disabled={sending} class="h-10 rounded-full border px-4 text-sm transition-colors hover:border-primary hover:text-primary disabled:opacity-60">{q.label}</button>
 				</form>
 			{/each}
+			<a href="/check" class="inline-flex h-10 items-center rounded-full border px-4 text-sm transition-colors hover:border-primary hover:text-primary" data-testid="quick-check">Проверь себя</a>
 		</div>
 
 		<form

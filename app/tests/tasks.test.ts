@@ -22,7 +22,7 @@ const platform = () => ({ env: { DB: db } }) as unknown as App.Platform;
 const addDays = (iso: string, n: number) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 const today = () => todayIso();
 
-const run = (name: 'addTask' | 'editTask' | 'deleteTask' | 'check', userId: string, fields: Record<string, string>) => {
+const run = (name: 'addTask' | 'editTask' | 'deleteTask' | 'check' | 'postpone', userId: string, fields: Record<string, string>) => {
 	const body = new FormData();
 	for (const [k, v] of Object.entries(fields)) body.set(k, v);
 	return actions[name]!({ request: new Request('http://localhost/', { method: 'POST', body }), locals: { userId }, platform: platform() } as never);
@@ -117,5 +117,37 @@ describe('changing and deleting tasks', () => {
 		expect(await run('editTask', 'a', { id, title: 'Х', day: today() })).toMatchObject({ status: 404 });
 		expect(await run('deleteTask', 'a', { id })).toMatchObject({ status: 404 });
 		expect(await tasksOf('a')).toHaveLength(1);
+	});
+});
+
+describe('moving a task to tomorrow', () => {
+	const add = async (userId: string, goalId: string, day: string) => {
+		await scoped(db, userId).addTasks(goalId, ['Задача'], day);
+		return (await tasksOf(userId))[0];
+	};
+
+	it('moves an overdue task to tomorrow and keeps its title', async () => {
+		const goalId = await goalFor('a');
+		const task = await add('a', goalId, addDays(today(), -3));
+		expect(await run('postpone', 'a', { id: task.id })).toMatchObject({ ok: true });
+		expect((await tasksOf('a'))[0]).toMatchObject({ title: 'Задача', planned_for: addDays(today(), 1) });
+	});
+
+	it('refuses a done task, a task already later than today, and another person\'s task', async () => {
+		const goalId = await goalFor('a');
+		const done = await add('a', goalId, addDays(today(), -1));
+		await scoped(db, 'a').setTaskCompleted(done.id, true);
+		expect(await run('postpone', 'a', { id: done.id })).toMatchObject({ status: 400 });
+		await scoped(db, 'a').addTasks(goalId, ['Будущая'], addDays(today(), 5));
+		const future = (await tasksOf('a')).find((t) => t.title === 'Будущая')!;
+		expect(await run('postpone', 'a', { id: future.id })).toMatchObject({ status: 400 });
+		expect(await run('postpone', 'b', { id: done.id })).toMatchObject({ status: 404 });
+	});
+
+	it('does not push a task past the deadline of its goal', async () => {
+		const goalId = await goalFor('a', today());
+		const task = await add('a', goalId, today());
+		expect(await run('postpone', 'a', { id: task.id })).toMatchObject({ status: 400 });
+		expect((await tasksOf('a'))[0].planned_for).toBe(today());
 	});
 });

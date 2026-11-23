@@ -39,11 +39,13 @@ test('quick commands are offered and send their question', async ({ page, contex
 	await signInAs(context, E2E.owner);
 	await page.goto('/chat');
 	const quick = page.getByTestId('quick');
-	await expect(quick.getByRole('button')).toHaveCount(4);
+	await expect(quick.getByRole('button')).toHaveCount(3);
+	// The self-check lives on its own page; the chat only points to it.
+	await expect(quick.getByRole('link', { name: 'Проверь себя' })).toHaveAttribute('href', '/check');
 	// "Explain simpler" needs an earlier answer, so it is not offered in an empty chat.
 	await expect(quick.getByRole('button', { name: 'Объясни проще' })).toHaveCount(0);
 	await expect(async () => {
-		await quick.getByRole('button', { name: 'Проверь меня' }).click();
+		await quick.getByRole('button', { name: 'Что делать сегодня?' }).click();
 		await expect(page.getByRole('alert')).toContainText('нет ключа', { timeout: 3000 });
 	}).toPass({ timeout: 20000 });
 	const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

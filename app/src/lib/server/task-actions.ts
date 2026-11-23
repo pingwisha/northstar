@@ -15,6 +15,7 @@ async function mine(event: RequestEvent) {
 
 const field = (data: FormData, name: string) => String(data.get(name) ?? '');
 const NO_TASK = 'Такой задачи нет.';
+const addDay = (iso: string, n: number): string => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 
 export const taskActions = {
 	check: async (event: RequestEvent) => {
@@ -55,6 +56,20 @@ export const taskActions = {
 		return { action: 'editTask', ok: true };
 	},
 
+	// «На завтра»: a task not done yet and due today or earlier moves to tomorrow, if the goal still lasts that long.
+	postpone: async (event: RequestEvent) => {
+		const me = await mine(event);
+		const taskId = field(await event.request.formData(), 'id');
+		const task = (await me.listGoalTasks()).find((t) => t.id === taskId);
+		const goal = task ? (await me.listGoals()).find((g) => g.id === task.goal_id && g.status === 'active') : undefined;
+		if (!task || !goal) return fail(404, { action: 'postpone', taskId, message: NO_TASK });
+		const today = todayIso(undefined, event.locals.timezone);
+		if (task.completed_at !== null || task.planned_for > today) return fail(400, { action: 'postpone', taskId, message: 'Переносить можно только несделанную задачу на сегодня или раньше.' });
+		const tomorrow = addDay(today, 1);
+		if (tomorrow > goal.deadline) return fail(400, { action: 'postpone', taskId, message: 'Завтра уже после срока цели. Выбери день вручную или сдвинь срок цели.' });
+		if (!(await me.updateTask(task.id, task.title, tomorrow))) return fail(404, { action: 'postpone', taskId, message: NO_TASK });
+		return { action: 'postpone', ok: true };
+	},
 	deleteTask: async (event: RequestEvent) => {
 		const me = await mine(event);
 		const taskId = field(await event.request.formData(), 'id');

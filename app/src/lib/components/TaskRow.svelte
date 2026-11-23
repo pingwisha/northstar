@@ -63,6 +63,16 @@
 		</button>
 	</div>
 
+	{#if !task.done && task.plannedFor <= today}
+		<form method="POST" action={act('postpone')} use:enhance class="flex flex-wrap items-center gap-2">
+			<input type="hidden" name="id" value={task.id} />
+			<button type="submit" class="h-10 rounded-md border px-3 text-sm" data-testid="postpone">Перенести на завтра</button>
+			{#if page.form?.action === 'postpone' && page.form.taskId === task.id && page.form.message}
+				<span role="alert" class="text-sm text-destructive">{page.form.message}</span>
+			{/if}
+		</form>
+	{/if}
+
 	{#if editing}
 		<div class="flex flex-col gap-3 border-t pt-3">
 			<form method="POST" action={act('editTask')} use:enhance={() => async ({ update, result }) => { await update({ reset: false }); if (result.type === 'success') editing = false; }} class="flex flex-col gap-2">

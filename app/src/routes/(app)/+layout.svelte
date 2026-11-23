@@ -26,20 +26,32 @@
 	}
 
 	// One navigation: a bar along the bottom on a phone, in the header on a wide screen.
+	// `phone: false` keeps a section out of the bottom bar: on a phone it is reached through «Ещё».
 	const tabs = $derived([
 		{ href: '/', label: 'Сегодня', short: 'Сегодня', icon: 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10' },
 		{ href: '/calendar', label: 'Календарь', short: 'Календарь', icon: 'M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z' },
-		{ href: '/trials', label: 'Пробники', short: 'Пробники', icon: 'M4 20V10M10 20V4M16 20v-8M22 20H2' },
-		{ href: '/mistakes', label: 'Тетрадь ошибок', short: 'Ошибки', wide: true, icon: 'M4 4h12a4 4 0 014 4v12H8a4 4 0 01-4-4V4zM8 9h8M8 13h5' },
 		{ href: '/goals', label: 'Мои цели', short: 'Цели', icon: 'M12 21a9 9 0 100-18 9 9 0 000 18zM12 16a4 4 0 100-8 4 4 0 000 8zM12 12h.01' },
+		{ href: '/check', label: 'Проверь себя', short: 'Проверка', phone: false, icon: 'M9 12l2 2 4-4M12 21a9 9 0 100-18 9 9 0 000 18z' },
+		{ href: '/trials', label: 'Пробники', short: 'Пробники', phone: false, icon: 'M4 20V10M10 20V4M16 20v-8M22 20H2' },
+		{ href: '/mistakes', label: 'Тетрадь ошибок', short: 'Ошибки', phone: false, icon: 'M4 4h12a4 4 0 014 4v12H8a4 4 0 01-4-4V4zM8 9h8M8 13h5' },
+		{ href: '/report', label: 'Недельный отчёт', short: 'Отчёт', phone: false, icon: 'M7 3h8l4 4v14H7zM15 3v4h4M10 12h6M10 16h6' },
+		{ href: '/exam', label: 'Режим экзамена', short: 'Экзамен', phone: false, icon: 'M12 7v5l3 2M12 21a9 9 0 100-18 9 9 0 000 18z' },
 		{ href: '/chat', label: 'Чат с ИИ', short: 'Чат', icon: 'M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z' },
 		...(data.role === 'owner'
 			? [
-					{ href: '/family', label: 'Семья и доступ', short: 'Семья', icon: 'M16 20v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1M9.5 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM21 20v-1a4 4 0 00-3-3.9M16 4.1a3.5 3.5 0 010 6.8' }
+					{ href: '/family', label: 'Семья и доступ', short: 'Семья', phone: false, icon: 'M16 20v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1M9.5 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM21 20v-1a4 4 0 00-3-3.9M16 4.1a3.5 3.5 0 010 6.8' }
 				]
-			: [])
+			: []),
+		{ href: '/more', label: 'Ещё', short: 'Ещё', desktop: false, icon: 'M5 12h.01M12 12h.01M19 12h.01' }
 	]);
-	const here = (href: string) => (href === '/' ? page.url.pathname === '/' : page.url.pathname.startsWith(href));
+	// The rest of the sections, for the «Ещё» page and for lighting up «Ещё» while one of them is open.
+	const hiddenOnPhone = $derived(tabs.filter((t) => 'phone' in t && t.phone === false).map((t) => t.href));
+	const here = (href: string) =>
+		href === '/'
+			? page.url.pathname === '/'
+			: href === '/more'
+				? page.url.pathname === '/more' || page.url.pathname.startsWith('/account') || page.url.pathname.startsWith('/settings') || hiddenOnPhone.some((h) => page.url.pathname.startsWith(h))
+				: page.url.pathname.startsWith(href);
 </script>
 
 <header class="sticky top-0 z-20 border-b lg:fixed lg:inset-y-0 lg:left-0 lg:w-60 lg:border-b-0 lg:border-r">
@@ -59,7 +71,7 @@
 					href={tab.href}
 					aria-current={here(tab.href) ? 'page' : undefined}
 					aria-label={tab.label}
-					class="{'wide' in tab && tab.wide ? 'max-lg:hidden ' : ''}flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-0.5 text-[10.5px] font-medium transition-colors lg:min-h-10 lg:w-full lg:flex-none lg:flex-row lg:justify-start lg:gap-3 lg:px-3 lg:text-sm {here(tab.href) ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}"
+					class="{'phone' in tab && tab.phone === false ? 'max-lg:hidden ' : ''}{'desktop' in tab && tab.desktop === false ? 'lg:hidden ' : ''}flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-0.5 text-[10.5px] font-medium transition-colors lg:min-h-10 lg:w-full lg:flex-none lg:flex-row lg:justify-start lg:gap-3 lg:px-3 lg:text-sm {here(tab.href) ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}"
 				>
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="lg:size-[18px]" aria-hidden="true"><path d={tab.icon} /></svg>
 					<span class="text-center leading-tight lg:hidden">{tab.short}</span>
@@ -93,6 +105,7 @@
 <div class="pb-24 lg:pb-8 lg:pl-60">
 	{@render children()}
 	<footer class="mx-auto flex max-w-3xl gap-4 px-4 pb-4 text-xs text-muted-foreground">
+		<a href="mailto:northstart.help@gmail.com" class="underline underline-offset-2" data-testid="contact-link">Написать нам</a>
 		<a href="/account" class="underline underline-offset-2">Мои данные</a>
 		<a href="/privacy" class="underline underline-offset-2">Конфиденциальность</a>
 		<a href="/terms" class="underline underline-offset-2">Условия</a>
