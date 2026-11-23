@@ -16,12 +16,12 @@
 	<LangSwitch lang={data.lang} />
 	{#if data.lang === 'ru'}
 		<h1 class="text-3xl font-semibold">Конфиденциальность</h1>
-		<p class="text-muted-foreground">Northstart помогает вести большие цели: срок, этапы, задачи на каждый день и честный процент.</p>
+		<p class="text-muted-foreground">Northstart помогает вести большие цели: срок, этапы, задачи на каждый день и честный процент прогресса.</p>
 
 		<h2 class="text-xl font-semibold">Что сайт хранит</h2>
 		<ul class="list-disc pl-5">
 			<li>Почту Google-аккаунта: по ней сайт узнаёт человека при входе. Пароля у сайта нет.</li>
-			<li>Всё, что пользователь записал сам: цели, сроки, задачи, заметки, ссылки, результаты пробников, ошибки, переписку с ИИ.</li>
+			<li>Всё, что пользователь записал сам: цели, сроки, задачи, заметки, ссылки, результаты пробников и тестов, ошибки, переписку с ИИ.</li>
 			<li>Часовой пояс браузера, чтобы правильно считать «сегодня».</li>
 			<li>Если включены напоминания: служебный адрес уведомлений браузера, выбранный час и часовой пояс. Выключить и стереть это можно в настройках.</li>
 			<li>В браузере хранятся: cookie входа (чтобы человек оставался в аккаунте), cookie часового пояса и настройки оформления.</li>
@@ -67,12 +67,12 @@
 		<p><a href="/welcome?lang=ru" class={link}>О сайте</a> · <a href="/terms?lang=ru" class={link}>Условия</a></p>
 	{:else}
 		<h1 class="text-3xl font-semibold">Privacy</h1>
-		<p class="text-muted-foreground">Northstart helps you reach big goals: a deadline, stages, daily tasks and an honest percentage.</p>
+		<p class="text-muted-foreground">Northstart helps you reach big goals: a deadline, stages, daily tasks and an honest progress percentage.</p>
 
 		<h2 class="text-xl font-semibold">What the site stores</h2>
 		<ul class="list-disc pl-5">
 			<li>The email of your Google account, so the site recognises you when you sign in. The site has no password.</li>
-			<li>Everything you write yourself: goals, deadlines, tasks, notes, links, practice test results, mistakes and your chats with the AI.</li>
+			<li>Everything you write yourself: goals, deadlines, tasks, notes, links, practice test and quiz results, mistakes and your chats with the AI.</li>
 			<li>Your browser's time zone, to count "today" correctly.</li>
 			<li>If you turn reminders on: the notification address your browser gives, the hour you chose and your time zone. You can turn this off, and erase it, in the settings.</li>
 			<li>In your browser: a sign-in cookie (so you stay signed in), a time-zone cookie and your appearance settings.</li>
