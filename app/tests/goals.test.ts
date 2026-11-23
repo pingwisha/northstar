@@ -57,6 +57,12 @@ describe('the goals page actions', () => {
 		expect(page.cards).toMatchObject([{ title: 'Выучить сербский', percent: 0, nextStep: null }]);
 	});
 
+	it('keeps the goal and says why when the plan could not be asked for right away', async () => {
+		const result = (await actions.add!(as('a', post({ title: 'Выучить сербский', description: 'час в день', deadline: '2030-02-12' })))) as { ok: boolean; planMessage: string | null };
+		expect(result.ok).toBe(true);
+		expect(typeof result.planMessage).toBe('string');
+	});
+
 	it('refuses a goal without a title or with a past deadline and stores nothing', async () => {
 		expect(await actions.add!(as('a', post({ title: ' ', deadline: '2030-02-12' })))).toMatchObject({ status: 400 });
 		expect(await actions.add!(as('a', post({ title: 'x', deadline: '2020-02-12' })))).toMatchObject({ status: 400 });

@@ -7,7 +7,13 @@ describe('streakDays', () => {
 		expect(streakDays(['2026-11-20T08:00:00Z', '2026-11-19T10:00:00Z', '2026-11-19T12:00:00Z', '2026-11-18T10:00:00Z'], '2026-11-20', 'UTC')).toBe(3));
 	it('keeps the streak alive when today has no check yet', () =>
 		expect(streakDays(['2026-11-19T10:00:00Z', '2026-11-18T10:00:00Z'], '2026-11-20', 'UTC')).toBe(2));
-	it('breaks after a missed day', () => expect(streakDays(['2026-11-18T10:00:00Z'], '2026-11-20', 'UTC')).toBe(0));
+	it('forgives one missed day', () => expect(streakDays(['2026-11-18T10:00:00Z'], '2026-11-20', 'UTC')).toBe(1));
+	it('breaks after two missed days in a row', () => expect(streakDays(['2026-11-17T10:00:00Z'], '2026-11-20', 'UTC')).toBe(0));
+	it('forgives one miss in a week, not a second one', () => {
+		const at = (d: number) => `2026-11-${String(d).padStart(2, '0')}T10:00:00Z`;
+		// Checked 20, 19, (18 missed), 17, 16, (15 missed), 14: the second miss ends the streak at 4.
+		expect(streakDays([at(20), at(19), at(17), at(16), at(14)], '2026-11-20', 'UTC')).toBe(4);
+	});
 	it('uses the persons own time zone', () =>
 		// 23:30 UTC on the 19th is already the 20th in Moscow.
 		expect(streakDays(['2026-11-19T23:30:00Z'], '2026-11-20', 'Europe/Moscow')).toBe(1));

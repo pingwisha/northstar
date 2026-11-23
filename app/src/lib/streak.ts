@@ -14,7 +14,10 @@ const previousDay = (iso: string): string => {
 };
 
 // Days in a row, counted back from today. A day with no check yet does not break the streak:
-// it counts from yesterday until the person has had the whole of today.
+// it counts from yesterday until the person has had the whole of today. One missed day is forgiven
+// in any seven days (only the days with a check are counted), so a single miss never wipes the streak.
+const FORGIVE_EVERY = 7;
+
 export function streakDays(completedAt: (string | null)[], today: string, timeZone: string = TIMEZONE): number {
 	const zone = validTimeZone(timeZone) ? timeZone : TIMEZONE;
 	const days = new Set<string>();
@@ -24,8 +27,16 @@ export function streakDays(completedAt: (string | null)[], today: string, timeZo
 	}
 	let day = days.has(today) ? today : previousDay(today);
 	let count = 0;
-	while (days.has(day)) {
-		count++;
+	let sinceForgiven = FORGIVE_EVERY;
+	for (;;) {
+		if (days.has(day)) {
+			count++;
+			sinceForgiven++;
+		} else if (sinceForgiven >= FORGIVE_EVERY && days.has(previousDay(day))) {
+			sinceForgiven = 0;
+		} else {
+			break;
+		}
 		day = previousDay(day);
 	}
 	return count;

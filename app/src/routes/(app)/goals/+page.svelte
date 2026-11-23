@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
 	import ProgressRing from '$lib/components/ProgressRing.svelte';
 	import { WEEKDAYS, formatDate } from '$lib/goals';
 	import { GOAL_COLORS, GOAL_COLOR_NAMES, GOAL_ICONS, GOAL_ICON_KEYS, GOAL_ICON_NAMES } from '$lib/goal-look';
@@ -10,7 +11,8 @@
 	const active = $derived(data.cards.filter((c) => c.status === 'active'));
 	const finished = $derived(data.cards.filter((c) => c.status === 'done'));
 	const archived = $derived(data.cards.filter((c) => c.status === 'archived'));
-	let adding = $state(false);
+	let adding = $state(page.url.searchParams.has('add'));
+	let creating = $state(false);
 	let editing = $state<string | null>(null);
 	let planning = $state<string | null>(null);
 
@@ -33,19 +35,30 @@
 	</div>
 
 	{#if adding || (form?.action === 'add' && form.message)}
-		<form method="POST" action="?/add" use:enhance={() => async ({ update, result }) => { await update(); if (result.type === 'success') adding = false; }} class="flex flex-col gap-3 rounded-xl border bg-card shadow-sm p-4">
+		<form method="POST" action="?/add" use:enhance={() => {
+				creating = true;
+				return async ({ update, result }) => {
+					await update();
+					creating = false;
+					if (result.type === 'success') adding = false;
+				};
+			}} class="flex flex-col gap-3 rounded-xl border bg-card shadow-sm p-4">
 			<label class="flex flex-col gap-1 text-sm">
 				Что хочешь получить в итоге
 				<input name="title" required maxlength="120" value={form?.values?.title ?? ''} placeholder="Например: сдать ОГЭ на 100 баллов" class="h-11 rounded-md border bg-background px-3" />
 			</label>
 			<label class="flex flex-col gap-1 text-sm">
-				Подробнее (необязательно)
-				<textarea name="description" maxlength="500" rows="2" class="rounded-md border bg-background px-3 py-2">{form?.values?.description ?? ''}</textarea>
+				Особые условия (необязательно)
+				<textarea name="description" maxlength="500" rows="3" placeholder="Например: занимаюсь по часу после школы, математика слабая, физику ещё не начинала" class="rounded-md border bg-background px-3 py-2">{form?.values?.description ?? ''}</textarea>
+				<span class="text-muted-foreground">Если условия обычные, оставь пустым. ИИ сам составит этапы и задачи на каждый день.</span>
 			</label>
 			<label class="flex flex-col gap-1 text-sm">
 				К какому числу
 				<input name="deadline" type="date" required min={data.today} value={form?.values?.deadline ?? ''} class="h-11 rounded-md border bg-background px-3" />
 			</label>
+			<details class="flex flex-col gap-3 text-sm">
+				<summary class="inline-flex h-10 cursor-pointer items-center rounded-md border px-3">Дополнительно: цвет, значок, дни недели</summary>
+				<div class="mt-3 flex flex-col gap-3">
 			{@render lookPicker('add', GOAL_COLORS[data.cards.length % GOAL_COLORS.length], 'target')}
 			<fieldset class="flex flex-col gap-2 text-sm">
 				<input type="hidden" name="days_form" value="1" />
@@ -59,11 +72,17 @@
 					{/each}
 				</div>
 			</fieldset>
+				</div>
+			</details>
 			{#if form?.action === 'add' && form.message}
 				<p role="alert" class="text-sm text-destructive">{form.message}</p>
 			{/if}
-			<button type="submit" class="h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">Сохранить цель</button>
+			<button type="submit" disabled={creating} class="h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-60">{creating ? 'Создаю цель, ИИ строит план: это займёт до минуты…' : 'Создать цель и план'}</button>
 		</form>
+	{/if}
+
+	{#if form?.action === 'add' && form.ok && form.planMessage}
+		<p role="status" class="rounded-md bg-muted p-3 text-sm" data-testid="plan-note">Цель добавлена, но план пока не построился. {form.planMessage} Нажми «Построить план» у цели, когда сможешь.</p>
 	{/if}
 
 	<ul class="flex flex-col gap-4" data-testid="goal-list">
@@ -232,7 +251,7 @@
 		{:else}
 			<li class="flex flex-col items-center gap-2 rounded-xl border border-dashed bg-card p-6 text-center text-muted-foreground">
 				<Illustration kind="goals" size={120} />
-				Пока нет активных целей. Нажми «Добавить цель».
+				Пока нет активных целей. Нажми «Добавить цель»: назови цель и срок, остальное сделает ИИ.
 			</li>
 		{/each}
 	</ul>

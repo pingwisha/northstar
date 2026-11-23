@@ -66,8 +66,8 @@ describe('reminderText', () => {
 
 	it('names today and overdue tasks with right word forms', () => {
 		expect(reminderText(1, 0)!.body).toBe('Не сделано: на сегодня 1 задача. Загляни в план.');
-		expect(reminderText(3, 2)!.body).toBe('Не сделано: на сегодня 3 задачи, просрочено 2. Загляни в план.');
-		expect(reminderText(0, 5)!.body).toBe('Не сделано: просрочено 5. Загляни в план.');
+		expect(reminderText(3, 2)!.body).toBe('Не сделано: на сегодня 3 задачи, с прошлых дней 2. Загляни в план.');
+		expect(reminderText(0, 5)!.body).toBe('Не сделано: с прошлых дней 5. Загляни в план.');
 		expect(reminderText(11, 0)!.body).toContain('11 задач');
 	});
 });

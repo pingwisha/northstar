@@ -38,7 +38,7 @@
 		<section class="grid grid-cols-3 gap-3 text-center" aria-label="Итоги недели" data-testid="report-totals">
 			<div class="rounded-xl border bg-card p-3 shadow-sm"><p class="text-2xl font-semibold">{w.doneInWeek}</p><p class="text-xs text-muted-foreground">сделано за неделю</p></div>
 			<div class="rounded-xl border bg-card p-3 shadow-sm"><p class="text-2xl font-semibold">{w.plannedDone} из {w.planned}</p><p class="text-xs text-muted-foreground">задач недели сделано</p></div>
-			<div class="rounded-xl border bg-card p-3 shadow-sm"><p class="text-2xl font-semibold" class:text-destructive={w.overdue > 0}>{w.overdue}</p><p class="text-xs text-muted-foreground">просрочено</p></div>
+			<div class="rounded-xl border bg-card p-3 shadow-sm"><p class="text-2xl font-semibold" class:text-destructive={w.overdue > 0}>{w.overdue}</p><p class="text-xs text-muted-foreground">с прошлых дней</p></div>
 		</section>
 
 		<section class="flex flex-col gap-3" aria-label="По целям">

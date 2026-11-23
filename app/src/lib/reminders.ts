@@ -50,7 +50,7 @@ export function reminderText(todayOpen: number, overdue: number): { title: strin
 	if (todayOpen === 0 && overdue === 0) return null;
 	const parts: string[] = [];
 	if (todayOpen > 0) parts.push(`на сегодня ${count(todayOpen)}`);
-	if (overdue > 0) parts.push(`просрочено ${overdue}`);
+	if (overdue > 0) parts.push(`с прошлых дней ${overdue}`);
 	return { title: 'Northstart', body: `Не сделано: ${parts.join(', ')}. Загляни в план.` };
 }
 

@@ -71,8 +71,11 @@ export const actions: Actions = {
 		const days = data.has('days_form') ? parseStudyDays(data.getAll('days')) : { ok: true as const, value: ALL_DAYS };
 		if (!days.ok) return fail(400, { action: 'add', message: days.message, values });
 		const look = parseLook({ color: data.get('color'), icon: data.get('icon') }, nextColor((await me.listGoals()).length));
-		await me.addGoal({ ...parsed.value, studyDays: days.value, ...look }, today);
-		return { action: 'add', ok: true };
+		const goalId = await me.addGoal({ ...parsed.value, studyDays: days.value, ...look }, today);
+		// The person only names the goal: the plan is asked for right away and waits as a draft.
+		const goal = (await me.listGoals()).find((g) => g.id === goalId)!;
+		const drafted = await draftPlan(me, await appEnv(platform), locals, goal, today);
+		return { action: 'add', ok: true, goalId, planMessage: drafted.ok ? null : drafted.message };
 	},
 
 	deadline: async ({ request, locals, platform }) => {
@@ -172,10 +175,8 @@ export const actions: Actions = {
 		if (!goal) return fail(404, { action: 'plan', goalId, message: 'Такой цели нет.' });
 		if ((await me.listGoalTasks()).some((t) => t.goal_id === goal.id)) return fail(409, { action: 'plan', goalId, message: 'У этой цели уже есть план.' });
 
-		const result = await generatePlan(env!, { userId: locals.userId!, role: locals.role ?? 'member' }, goal, todayIso(undefined, locals.timezone));
-		if (!result.ok) return fail(result.error === 'not_available' ? 403 : 502, { action: 'plan', goalId, message: PLAN_MESSAGES[result.error] });
-
-		await me.saveDraft(goal.id, result.draft, result.missingMaterials);
+		const drafted = await draftPlan(me, env, locals, goal, todayIso(undefined, locals.timezone));
+		if (!drafted.ok) return fail(drafted.status, { action: 'plan', goalId, message: drafted.message });
 		return { action: 'plan', ok: true, goalId };
 	},
 
@@ -213,6 +214,21 @@ export const actions: Actions = {
 		return { action: 'discardPlan', ok: true, goalId };
 	}
 };
+
+// Asks the AI for a plan and keeps it as a draft. Says why when it cannot.
+async function draftPlan(
+	me: ReturnType<typeof scoped>,
+	env: Awaited<ReturnType<typeof appEnv>>,
+	locals: App.Locals,
+	goal: Parameters<typeof generatePlan>[2] & { id: string },
+	today: string
+): Promise<{ ok: true } | { ok: false; status: 403 | 502; message: string }> {
+	if (!env) return { ok: false, status: 403, message: PLAN_MESSAGES.not_available };
+	const result = await generatePlan(env, { userId: locals.userId!, role: locals.role ?? 'member' }, goal, today);
+	if (!result.ok) return { ok: false, status: result.error === 'not_available' ? 403 : 502, message: PLAN_MESSAGES[result.error] };
+	await me.saveDraft(goal.id, result.draft, result.missingMaterials);
+	return { ok: true };
+}
 
 // What «Я отстаю» would do for a goal, or why it cannot.
 async function behindPlan(me: ReturnType<typeof scoped>, goalId: string, timezone: string | undefined) {

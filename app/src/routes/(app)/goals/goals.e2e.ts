@@ -11,11 +11,12 @@ test('a person adds a goal, sees it with 0%, changes its deadline and finishes i
 	await page.getByRole('button', { name: 'Добавить цель' }).click();
 	await page.getByLabel('Что хочешь получить в итоге').fill('Сдать ОГЭ на 100 баллов');
 	await page.getByLabel('К какому числу').fill('2030-05-18');
+	await page.getByText('Дополнительно: цвет, значок, дни недели').click();
 	await page.getByLabel('Суббота').uncheck({ force: true });
 	await page.getByLabel('Воскресенье').uncheck({ force: true });
 	await page.getByLabel('Розовый').check({ force: true });
 	await page.getByLabel('Книги').check({ force: true });
-	await page.getByRole('button', { name: 'Сохранить цель' }).click();
+	await page.getByRole('button', { name: 'Создать цель и план' }).click();
 
 	const card = page.getByTestId('goal-card').filter({ hasText: 'Сдать ОГЭ на 100 баллов' });
 	await expect(card).toBeVisible();

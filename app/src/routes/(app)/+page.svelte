@@ -35,7 +35,7 @@
 				<Illustration kind="start" size={170} />
 				<h2 class="text-2xl font-semibold">Добро пожаловать в Northstart</h2>
 				<p class="max-w-md text-muted-foreground">Целей пока нет. Добавь первую, и здесь появятся задачи на каждый день, серия и честный процент.</p>
-				<a href="/goals" class="inline-flex h-12 items-center rounded-md bg-primary px-6 font-medium text-primary-foreground transition-transform hover:scale-[1.03]">Добавить цель</a>
+				<a href="/goals?add=1" class="inline-flex h-12 items-center rounded-md bg-primary px-6 font-medium text-primary-foreground transition-transform hover:scale-[1.03]">Добавить цель</a>
 			</div>
 			<ol class="grid gap-3 sm:grid-cols-3" aria-label="Как это работает">
 				{#each STEPS as [n, title, text], i (n)}

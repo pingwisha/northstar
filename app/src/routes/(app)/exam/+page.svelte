@@ -33,7 +33,7 @@
 				<span class="text-sm text-muted-foreground">{g.daysLabel}, срок {formatDate(g.deadline)}</span>
 			</p>
 			<p class="text-sm" data-testid="exam-load">
-				Не сделано задач: {g.open}{#if g.overdue}, из них просрочено {g.overdue}{/if}.
+				Не сделано задач: {g.open}{#if g.overdue}, из них с прошлых дней {g.overdue}{/if}.
 				{#if g.perDay !== null && g.open > 0}Чтобы успеть, нужно в среднем {g.perDay} в день.{/if}
 			</p>
 
