@@ -29,8 +29,8 @@ test('the sign-in page is still there', async ({ page }) => {
 	await expect(page.getByRole('link', { name: 'Войти через Google' })).toBeVisible();
 });
 
-test('the family page is closed to a visitor who is not signed in', async ({ page }) => {
-	await page.goto('/family');
+test('the statistics page is closed to a visitor who is not signed in', async ({ page }) => {
+	await page.goto('/stats');
 	await expect(page).toHaveURL(/\/login$/);
 });
 

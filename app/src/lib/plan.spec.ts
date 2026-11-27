@@ -91,12 +91,18 @@ describe('targetTaskCount', () => {
 
 describe('parseMaterials', () => {
 	it('builds the address from a listed site, one list per task, empty lists for anything unusable', () => {
-		const raw = JSON.stringify({ materials: [[{ kind: 'trainer', title: 'Задания', site: 'oge-sdamgia', query: 'дроби' }], 'мусор'] });
+		const raw = JSON.stringify({ materials: [[{ kind: 'trainer', title: 'Задания', site: 'oge-rus', query: 'ударения' }], 'мусор'] });
 		const r = parseMaterials(raw, 3);
 		expect(r.map((l) => l.length)).toEqual([1, 0, 0]);
-		expect(r[0][0]).toEqual({ kind: 'trainer', title: 'Задания', url: 'https://oge.sdamgia.ru/search?search=' + encodeURIComponent('дроби'), source: 'Решу ОГЭ' });
+		expect(r[0][0]).toEqual({ kind: 'trainer', title: 'Задания', url: 'https://rus-oge.sdamgia.ru/search?search=' + encodeURIComponent('ударения'), source: 'Решу ОГЭ: русский язык' });
 		expect(parseMaterials('не json', 2)).toEqual([[], []]);
 		expect(parseMaterials('{"x":1}', 1)).toEqual([[]]);
+	});
+
+	it('takes a ready page from the list by its id and nothing else', () => {
+		const raw = JSON.stringify({ materials: [[{ kind: 'trainer', title: 'Тексты', page: 'oge-rus-interview-texts' }, { kind: 'trainer', title: 'Чужая', page: 'https://evil.example/' }]] });
+		const r = parseMaterials(raw, 1)[0];
+		expect(r).toEqual([{ kind: 'trainer', title: 'Тексты', url: 'https://ruso-oge.sdamgia.ru/test?theme=2', source: 'Решу ОГЭ: тексты итогового собеседования' }]);
 	});
 
 	it('never takes an address written by the AI, and drops a site that is not in the list', () => {

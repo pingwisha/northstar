@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SITES, buildMaterialUrl, siteListForPrompt } from './sites';
+import { PAGES, SITES, buildMaterialUrl, pageListForPrompt, siteListForPrompt } from './sites';
 
 describe('the site list', () => {
 	it('has unique ids and https addresses only', () => {
@@ -13,7 +13,18 @@ describe('the site list', () => {
 		}
 	});
 
-	it('shows every site to the AI', () => {
+	it('keeps ids unique across pages and sites, and every page is an https address', () => {
+		const ids = [...PAGES.map((p) => p.id), ...SITES.map((s) => s.id)];
+		expect(new Set(ids).size).toBe(ids.length);
+		for (const p of PAGES) expect(p.url.startsWith('https://'), p.id).toBe(true);
+	});
+
+	it('has a Решу ОГЭ and a Решу ЕГЭ site for every school subject', () => {
+		for (const id of ['oge-rus', 'oge-math', 'oge-inf', 'ege-rus', 'ege-math', 'ege-mathb', 'ege-phys']) expect(SITES.some((s) => s.id === id), id).toBe(true);
+	});
+
+	it('shows every page and site to the AI', () => {
+		for (const p of PAGES) expect(pageListForPrompt()).toContain(p.id);
 		for (const s of SITES) expect(siteListForPrompt()).toContain(s.id);
 	});
 });

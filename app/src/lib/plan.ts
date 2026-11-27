@@ -2,7 +2,7 @@
 // the dates come from code, so every task is guaranteed to fall before the deadline.
 import { daysUntil } from './progress';
 import { ALL_DAYS, MAX_TITLE, isValidStudyDays } from './goals';
-import { buildMaterialUrl, findSite, siteListForPrompt } from './sites';
+import { buildMaterialUrl, findPage, findSite, pageListForPrompt, siteListForPrompt } from './sites';
 import { plainText } from './ai-text';
 
 export const MAX_STAGES = 8;
@@ -67,12 +67,15 @@ export function buildPlanMessages(goal: { title: string; description: string | n
 export function buildMaterialsMessages(goal: { title: string }, stage: PlanStage) {
 	const system = [
 		'Ты подбираешь учебные материалы к задачам плана. Отвечай только одним JSON объектом, без пояснений.',
-		'Формат: {"materials":[[{"kind":"article","title":"...","site":"khan","query":"..."}], []]}',
-		'Внешний список идёт в том же порядке, что задачи, по одному вложенному списку на каждую задачу. К задаче от нуля до двух материалов. kind один из: article, video, trainer, checklist, other.',
-		'Адреса не пиши. Выбери site только из этого списка (id: название, для чего подходит) и в query напиши короткую фразу для поиска на этом сайте. Для Википедии и Викисловаря это точное название статьи или слово, для MDN название темы по-английски, для YouTube тема и слово «урок», для остальных сайтов тема задачи:',
+		'Формат: {"materials":[[{"kind":"trainer","title":"...","page":"id страницы"},{"kind":"article","title":"...","site":"id сайта","query":"..."}], []]}',
+		'Внешний список идёт в том же порядке, что задачи, по одному вложенному списку на каждую задачу. К задаче один или два материала, пустой список только если совсем ничего не подходит. kind один из: article, video, trainer, checklist, other.',
+		'Адреса не пиши. Сначала ищи подходящую готовую страницу в списке страниц и ставь её id в page. Если страницы нет, выбери site из списка сайтов и в query напиши короткую фразу для поиска на этом сайте.',
+		'Для предметов ОГЭ и ЕГЭ бери сайт «Решу ОГЭ» или «Решу ЕГЭ» именно этого предмета, а в query пиши тему задания (например «ударения» или «квадратные уравнения»), не название задачи целиком. Для Википедии и Викисловаря query это точное название статьи или слово, для MDN название темы по-английски, для YouTube тема и слово «урок».',
+		'Страницы (id: название, что на ней):',
+		pageListForPrompt(),
+		'Сайты (id: название, для чего подходит):',
 		siteListForPrompt(),
-		'Если ни один сайт не подходит, оставь список для задачи пустым.',
-		'Названия пиши простым русским текстом без звёздочек, решёток, скобок и косых черт. Не придумывай факты.'
+		'Названия материалов пиши простым русским текстом без звёздочек, решёток, скобок и косых черт. Не придумывай факты.'
 	].join('\n');
 	const user = [`Цель: ${goal.title}`, `Этап: ${stage.title}`, 'Задачи по порядку:', ...stage.tasks.map((t, i) => `${i + 1}. ${t.title}`)].join('\n');
 	return [
@@ -103,7 +106,9 @@ function parseMaterial(raw: unknown): PlanMaterial | null {
 	const title = text(raw.title, MAX_TITLE + 40);
 	if (!title) return null;
 	const kind = MATERIAL_KINDS.find((k) => k === raw.kind) ?? 'other';
-	// An address the AI wrote itself is ignored: only a site from the list can give one.
+	// An address the AI wrote itself is ignored: only a page or a site from the lists can give one.
+	const page = findPage(raw.page);
+	if (page) return { kind, title, url: page.url, source: page.name };
 	const url = buildMaterialUrl(raw.site, raw.query);
 	const site = findSite(raw.site);
 	if (!url || !site) return null;

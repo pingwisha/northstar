@@ -15,7 +15,7 @@ test('on a phone the rare sections are behind «Ещё» and the bottom bar stay
 		await expect(list.getByRole('link', { name: new RegExp(name) })).toBeVisible();
 	}
 	// A member does not see the owner's page.
-	await expect(list.getByRole('link', { name: /Семья и доступ/ })).toHaveCount(0);
+	await expect(list.getByRole('link', { name: /Статистика/ })).toHaveCount(0);
 	// Inside one of the sections «Ещё» stays lit.
 	await list.getByRole('link', { name: /Пробники/ }).click();
 	await expect(bar.getByRole('link', { name: 'Ещё' })).toHaveAttribute('aria-current', 'page');

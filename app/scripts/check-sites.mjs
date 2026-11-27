@@ -1,6 +1,6 @@
 // Opens the home page and an example search of every site in app/src/lib/sites.ts.
 // Run before publishing: `node scripts/check-sites.mjs` from app/. Exits 1 when one does not open.
-import { SITES, buildMaterialUrl } from '../src/lib/sites.ts';
+import { PAGES, SITES, buildMaterialUrl } from '../src/lib/sites.ts';
 
 // Sites that refuse robots answer with these even when the page exists.
 const NOT_PROOF_OF_BROKEN = new Set([401, 403, 405, 429, 999]);
@@ -16,6 +16,11 @@ async function opens(url) {
 }
 
 let failed = 0;
+for (const page of PAGES) {
+	const problem = await opens(page.url);
+	console.log(`${problem ? 'FAIL' : 'ok  '} ${page.id} ${page.url}${problem ? ` (${problem})` : ''}`);
+	if (problem) failed++;
+}
 for (const site of SITES) {
 	const urls = new Set([site.base, buildMaterialUrl(site.id, 'проверка')]);
 	for (const url of urls) {

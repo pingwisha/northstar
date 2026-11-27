@@ -53,8 +53,8 @@ test('an empty goal list invites the person to add a goal', async ({ page, conte
 	await expect(page.getByText('Пока нет активных целей')).toBeVisible();
 });
 
-test('a member cannot open the family page', async ({ page, context }) => {
+test('a member cannot open the statistics page', async ({ page, context }) => {
 	await signInAs(context, E2E.goals);
-	const response = await page.goto('/family');
+	const response = await page.goto('/stats');
 	expect(response?.status()).toBe(403);
 });

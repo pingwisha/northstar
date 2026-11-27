@@ -27,12 +27,12 @@ test('Enter sends the message and Shift+Enter makes a new line', async ({ page, 
 	await expect(page.getByRole('alert')).toContainText('нет ключа');
 });
 
-test('a member has the chat too, and no family page', async ({ page, context }) => {
+test('a member has the chat too, and no statistics page', async ({ page, context }) => {
 	await signInAs(context, E2E.goals);
 	await page.goto('/chat');
 	await expect(page.getByRole('heading', { name: 'Чат с ИИ' })).toBeVisible();
 	await expect(page.getByTestId('quick')).toBeVisible();
-	await expect(page.getByRole('link', { name: 'Семья и доступ' })).toHaveCount(0);
+	await expect(page.getByRole('link', { name: 'Статистика' })).toHaveCount(0);
 });
 
 test('quick commands are offered and send their question', async ({ page, context }) => {

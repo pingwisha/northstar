@@ -98,36 +98,8 @@ export async function countUsersSince(db: D1Database, day: string): Promise<numb
 }
 
 // Site-wide totals for the owner's page. Counts only: no names, no goals, no text of anyone.
-export interface SiteStats {
-	users: number;
-	newThisWeek: number;
-	activeThisWeek: number;
-	goals: number;
-	tasksDoneThisWeek: number;
-	aiMembersToday: number;
-}
-
-export async function siteStats(db: D1Database, now: Date = new Date()): Promise<SiteStats> {
-	const iso = (d: Date) => d.toISOString();
-	const weekAgo = iso(new Date(now.getTime() - 7 * 86_400_000));
-	const day = now.toISOString().slice(0, 10);
-	const one = async (sql: string, ...binds: unknown[]) => (await db.prepare(sql).bind(...binds).first<{ n: number }>())?.n ?? 0;
-	return {
-		users: await one('SELECT COUNT(*) AS n FROM users'),
-		newThisWeek: await one('SELECT COUNT(*) AS n FROM users WHERE created_at >= ?', weekAgo),
-		activeThisWeek: await one('SELECT COUNT(DISTINCT user_id) AS n FROM tasks WHERE completed_at >= ?', weekAgo),
-		goals: await one("SELECT COUNT(*) AS n FROM goals WHERE status = 'active'"),
-		tasksDoneThisWeek: await one('SELECT COUNT(*) AS n FROM tasks WHERE completed_at >= ?', weekAgo),
-		aiMembersToday: await one("SELECT COALESCE(SUM(u.count), 0) AS n FROM ai_usage u JOIN users x ON x.id = u.user_id WHERE u.day = ? AND x.role != 'owner'", day)
-	};
-}
-
 export async function isInvited(db: D1Database, email: string): Promise<boolean> {
 	return (await db.prepare('SELECT 1 AS ok FROM invites WHERE email = ?').bind(normalize(email)).first()) !== null;
-}
-
-export async function listInvites(db: D1Database): Promise<Invite[]> {
-	return (await db.prepare('SELECT * FROM invites ORDER BY created_at, rowid').all<Invite>()).results;
 }
 
 export async function addInvite(db: D1Database, email: string, invitedBy: string): Promise<void> {
