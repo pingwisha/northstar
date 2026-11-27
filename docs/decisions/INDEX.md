@@ -75,3 +75,4 @@ id,title,tags,status
 0072-materials-only-from-a-verified-list,"Materials come only from a list of verified sites kept in the code","product, ai, quality",active
 0073-owner-statistics-page-without-tracking,"The owner reads usage numbers on a statistics page built from existing tables","product, privacy, observability",active
 0074-free-tier-ai-key-exception,"The site's AI key may be a free-tier Gemini key, with people told in the privacy page","governance, model-routing, privacy",active
+0075-friends-share-only-what-each-person-allows,"Friends see only the goals, tasks and marks a person explicitly allows, item by item","product, privacy, social",active

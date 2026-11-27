@@ -24,3 +24,4 @@ human-escalation-rule,"Agents must hand over to a human when blocked, before irr
 handoff-has-brief-result-evidence,"Handoffs must carry a brief, a result and evidence","practice-packs, agent-roles, guardrail",active
 ai-materials-only-from-the-list,"Materials in a plan come only from the verified site list or the search link","product, ai, guardrail",active
 stats-hold-no-personal-data,"The statistics page shows only totals, never names, emails or goal text","privacy, guardrail",active
+sharing-needs-explicit-consent-per-item,"Nothing is shown to a friend unless the owner allowed that item, and never emails, notes or chats","privacy, social, guardrail",active
