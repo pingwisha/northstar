@@ -2,6 +2,7 @@
 import { daysUntil } from '../progress';
 import { buildMaterialsMessages, buildPlanMessages, parseMaterials, parsePlan, schedulePlan, targetTaskCount, withSearchLinks, type PlanStage, type ScheduledStage } from '../plan';
 import { askAi, type AiCaller, type AiEnv } from './ai';
+import { resolveDirect } from './resolve';
 
 const PLAN_TIMEOUT_MS = 90_000;
 const PLAN_MAX_TOKENS = 8192;
@@ -20,7 +21,11 @@ export async function fillStageMaterials(
 	const answer = await askAi(env, caller, buildMaterialsMessages(goal, stage), { json: true, maxTokens: 3000, timeoutMs: 60_000, temperature: 0.3, fetch: send, allowMember: true });
 	if (!answer.ok && (answer.error === 'limit_reached' || answer.error === 'service_busy' || answer.error === 'not_available')) return { ok: false, error: answer.error };
 	const found = answer.ok ? parseMaterials(answer.content, stage.tasks.length) : null;
-	const withMaterials: PlanStage = { ...stage, tasks: stage.tasks.map((t, j) => ({ ...t, materials: found?.[j] ?? t.materials })) };
+	// A search address becomes the page itself where the site allows it (resolve.ts); otherwise it stays.
+	const withMaterials: PlanStage = {
+		...stage,
+		tasks: await Promise.all(stage.tasks.map(async (t, j) => ({ ...t, materials: found?.[j] ? await Promise.all(found[j].map((m) => resolveDirect(m, send))) : t.materials })))
+	};
 	const [checked] = withSearchLinks(goal.title, [withMaterials]);
 	return { ok: true, stage: checked };
 }
