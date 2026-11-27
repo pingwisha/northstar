@@ -45,3 +45,26 @@ test('a person records practice test results and sees growth and weak topics', a
 	const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 	expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test('a timed trial counts down, survives a reload and opens the result form with its title', async ({ page, context }) => {
+	seedDb(`INSERT OR IGNORE INTO goals (id, user_id, title, start_date, deadline) VALUES ('tr-g2', '${E2E.trials.id}', 'Другая цель', '${todayIso()}', '2030-01-01')`);
+	await signInAs(context, E2E.trials);
+	await page.goto('/trials');
+	const timer = page.getByTestId('trial-timer');
+	await expect(async () => {
+		await timer.getByLabel('Сколько минут').fill('0');
+		await timer.getByRole('button', { name: 'Начать' }).click();
+		await expect(timer.getByRole('alert')).toContainText('от 1 до 300', { timeout: 1500 });
+	}).toPass({ timeout: 20000 });
+	await timer.getByLabel('Название').fill('Вариант 12');
+	await timer.getByLabel('Сколько минут').fill('90');
+	await timer.getByRole('button', { name: 'Начать' }).click();
+	await expect(page.getByTestId('timer-clock')).toContainText(/1:29:5\d|1:30:00/);
+
+	await page.reload();
+	await expect(page.getByTestId('timer-clock')).toContainText(/1:29:/);
+
+	await page.getByRole('button', { name: 'Закончить' }).click();
+	await expect(page.getByTestId('trial-form').getByLabel('Название пробника')).toHaveValue('Вариант 12');
+	await expect(page.getByTestId('timer-clock')).toHaveCount(0);
+});

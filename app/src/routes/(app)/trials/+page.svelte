@@ -1,11 +1,65 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { formatDate } from '$lib/goals';
+	import { clock, parseMinutes, parseStoredTimer, secondsLeft } from '$lib/trials';
 	import Illustration from '$lib/components/Illustration.svelte';
 
 	let { data, form } = $props();
 	let adding = $state(false);
 	let confirming = $state<string | null>(null);
+
+	// The timed trial lives in the browser: the end time is kept, so a reload does not lose it.
+	const STORE = 'northstar-trial-timer';
+	let timer = $state<{ title: string; endAt: number } | null>(null);
+	let now = $state(Date.now());
+	let timerTitle = $state('');
+	let timerMinutes = $state('');
+	let timerError = $state('');
+	let prefillTitle = $state('');
+	const left = $derived(timer ? secondsLeft(timer.endAt, now) : 0);
+	const save = (v: typeof timer) => {
+		try {
+			if (v) localStorage.setItem(STORE, JSON.stringify(v));
+			else localStorage.removeItem(STORE);
+		} catch {
+			/* storage blocked: the timer still runs until the page closes */
+		}
+	};
+	function startTimer() {
+		const minutes = parseMinutes(timerMinutes);
+		if (!minutes.ok) return (timerError = minutes.message);
+		timerError = '';
+		timer = { title: timerTitle.trim().slice(0, 120), endAt: Date.now() + minutes.value * 60_000 };
+		now = Date.now();
+		save(timer);
+	}
+	// Time is up, or "Закончить": the result form opens with the title filled in.
+	function finishTimer() {
+		if (!timer) return;
+		prefillTitle = timer.title;
+		timer = null;
+		save(null);
+		adding = true;
+	}
+	function cancelTimer() {
+		timer = null;
+		save(null);
+	}
+	$effect(() => {
+		try {
+			timer = parseStoredTimer(localStorage.getItem(STORE));
+		} catch {
+			/* no storage */
+		}
+	});
+	$effect(() => {
+		if (!timer) return;
+		const id = setInterval(() => {
+			now = Date.now();
+			if (timer && secondsLeft(timer.endAt, now) === 0) finishTimer();
+		}, 500);
+		return () => clearInterval(id);
+	});
 
 	// The chart is drawn in a fixed box and scales to the screen width.
 	const W = 320;
@@ -24,6 +78,33 @@
 		{/if}
 	</div>
 
+	{#if data.activeGoals.length}
+		<section class="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm" aria-labelledby="timer-h" data-testid="trial-timer">
+			<h2 id="timer-h" class="text-lg font-medium">Пробник по таймеру</h2>
+			{#if timer}
+				<p class="text-sm text-muted-foreground">{timer.title || 'Пробник'}</p>
+				<p role="timer" class="text-4xl font-semibold tabular-nums" data-testid="timer-clock">{clock(left)}</p>
+				<div class="flex gap-2">
+					<button type="button" class="h-11 flex-1 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground" onclick={finishTimer}>Закончить</button>
+					<button type="button" class="h-11 rounded-md border px-4 text-sm" onclick={cancelTimer}>Отмена</button>
+				</div>
+			{:else}
+				<form onsubmit={(e) => { e.preventDefault(); startTimer(); }} class="flex flex-col gap-3">
+					<label class="flex flex-col gap-1 text-sm">
+						Название
+						<input bind:value={timerTitle} maxlength="120" placeholder="Например: вариант 12" class="h-11 min-w-0 rounded-md border bg-background px-3" />
+					</label>
+					<label class="flex flex-col gap-1 text-sm">
+						Сколько минут
+						<input bind:value={timerMinutes} inputmode="numeric" placeholder="90" class="h-11 min-w-0 rounded-md border bg-background px-3" />
+					</label>
+					{#if timerError}<p role="alert" class="text-sm text-destructive">{timerError}</p>{/if}
+					<button type="submit" class="h-11 rounded-md border px-4 text-sm font-medium">Начать</button>
+				</form>
+			{/if}
+		</section>
+	{/if}
+
 	{#if form?.action === 'delete' && form.message}
 		<p role="alert" class="text-sm text-destructive">{form.message}</p>
 	{/if}
@@ -40,7 +121,7 @@
 			</label>
 			<label class="flex flex-col gap-1 text-sm">
 				Название пробника
-				<input name="title" required maxlength="120" value={form?.values?.title ?? ''} placeholder="Например: Пробник 3, вариант 12" class="h-11 rounded-md border bg-background px-3" />
+				<input name="title" required maxlength="120" value={form?.values?.title ?? prefillTitle} placeholder="Например: Пробник 3, вариант 12" class="h-11 rounded-md border bg-background px-3" />
 			</label>
 			<label class="flex flex-col gap-1 text-sm">
 				День

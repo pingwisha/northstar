@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseTopics, parseTrial, summarizeTrials, tasksForTopic, type Trial } from './trials';
+import { parseTopics, parseTrial, summarizeTrials, tasksForTopic, clock, parseMinutes, parseStoredTimer, secondsLeft, type Trial } from './trials';
 
 const today = '2026-11-20';
 const ok = { title: 'Пробник 1', day: '2026-11-10', score: '21', maxScore: '30', topics: '' };
@@ -67,5 +67,25 @@ describe('tasksForTopic', () => {
 	});
 	it('finds nothing for an empty topic', () => {
 		expect(tasksForTopic('  ', [t('Дроби')])).toEqual([]);
+	});
+});
+
+describe('timer helpers', () => {
+	it('takes whole minutes from 1 to 300', () => {
+		expect(parseMinutes('90')).toEqual({ ok: true, value: 90 });
+		for (const bad of ['', '0', '301', '1,5', 'abc', '-5', undefined]) expect(parseMinutes(bad).ok).toBe(false);
+	});
+	it('counts seconds left, never below zero, rounding up', () => {
+		expect(secondsLeft(10_000, 4_500)).toBe(6);
+		expect(secondsLeft(10_000, 20_000)).toBe(0);
+	});
+	it('writes the clock', () => {
+		expect(clock(5400)).toBe('1:30:00');
+		expect(clock(65)).toBe('01:05');
+		expect(clock(-3)).toBe('00:00');
+	});
+	it('ignores broken storage', () => {
+		expect(parseStoredTimer('{"title":"В","endAt":5}')).toEqual({ title: 'В', endAt: 5 });
+		for (const bad of ['', 'nope', '{"endAt":"x"}', '{"title":1,"endAt":2}', null]) expect(parseStoredTimer(bad)).toBeNull();
 	});
 });

@@ -117,3 +117,34 @@ export function tasksForTopic<T extends { title: string; completedAt: string | n
 	if (!stems.length) return [];
 	return tasks.filter((t) => !t.completedAt && stems.every((s) => t.title.toLowerCase().includes(s))).slice(0, limit);
 }
+
+export const MAX_TIMER_MINUTES = 300;
+
+// The length of a timed trial: a whole number of minutes, 1..300.
+export function parseMinutes(raw: unknown): Parsed<number> {
+	const text = (typeof raw === 'string' ? raw : '').trim();
+	if (!/^\d{1,4}$/.test(text) || Number(text) < 1 || Number(text) > MAX_TIMER_MINUTES) return { ok: false, message: `Время пиши целым числом минут от 1 до ${MAX_TIMER_MINUTES}.` };
+	return { ok: true, value: Number(text) };
+}
+
+export const secondsLeft = (endAt: number, now: number): number => Math.max(0, Math.ceil((endAt - now) / 1000));
+
+// 5400 -> "1:30:00", 65 -> "01:05".
+export function clock(seconds: number): string {
+	const s = Math.max(0, Math.floor(seconds));
+	const two = (n: number) => String(n).padStart(2, '0');
+	const h = Math.floor(s / 3600);
+	const m = Math.floor((s % 3600) / 60);
+	return h > 0 ? `${h}:${two(m)}:${two(s % 60)}` : `${two(m)}:${two(s % 60)}`;
+}
+
+// What the browser keeps about a running timer. Anything else in storage is ignored.
+export function parseStoredTimer(raw: unknown): { title: string; endAt: number } | null {
+	try {
+		const v = JSON.parse(typeof raw === 'string' ? raw : '') as { title?: unknown; endAt?: unknown };
+		if (typeof v.title === 'string' && typeof v.endAt === 'number' && Number.isFinite(v.endAt)) return { title: v.title.slice(0, MAX_TRIAL_TITLE), endAt: v.endAt };
+	} catch {
+		/* not JSON: no timer */
+	}
+	return null;
+}
