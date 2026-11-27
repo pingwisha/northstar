@@ -29,6 +29,36 @@ test('a person picks an accent colour and a text size, and they stay after a rel
 	await expect(html).not.toHaveAttribute('data-size', /.+/);
 });
 
+test('a person picks a font and a hue of their own for the buttons, and they stay after a reload', async ({ page, context }) => {
+	await signInAs(context, E2E.owner);
+	await page.goto('/settings');
+	const html = page.locator('html');
+	await expect(html).not.toHaveAttribute('data-font', /.+/);
+
+	await expect(async () => {
+		await page.getByTestId('font-serif').click();
+		await expect(html).toHaveAttribute('data-font', 'serif', { timeout: 1500 });
+	}).toPass({ timeout: 20000 });
+	await page.getByTestId('hue').fill('140');
+	await expect(html).toHaveAttribute('data-accent', 'custom');
+	await expect(html).toHaveCSS('--hue', '140');
+
+	await page.reload();
+	await expect(html).toHaveAttribute('data-font', 'serif');
+	await expect(html).toHaveAttribute('data-accent', 'custom');
+	await expect(html).toHaveCSS('--hue', '140');
+	expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toContain('Georgia');
+
+	// A ready colour cancels the own hue; the normal font comes back.
+	await page.getByTestId('accent-violet').click();
+	await expect(html).toHaveAttribute('data-accent', 'violet');
+	await page.getByTestId('font-normal').click();
+	await page.reload();
+	await expect(html).not.toHaveAttribute('data-font', /.+/);
+	await expect(html).toHaveAttribute('data-accent', 'violet');
+	await page.getByTestId('accent-blue').click();
+});
+
 test('a new person sees the welcome with three steps', async ({ page, context }) => {
 	await signInAs(context, E2E.owner);
 	await page.goto('/');

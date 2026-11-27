@@ -1,5 +1,5 @@
 // The colour and icon of a goal. Only keys from these lists are stored, never free text.
-export const GOAL_COLORS = ['blue', 'violet', 'green', 'rose', 'orange', 'teal', 'amber', 'slate'] as const;
+export const GOAL_COLORS = ['blue', 'violet', 'green', 'rose', 'orange', 'teal', 'amber', 'slate', 'red', 'lime', 'sky', 'brown'] as const;
 export type GoalColor = (typeof GOAL_COLORS)[number];
 
 export const GOAL_COLOR_NAMES: Record<GoalColor, string> = {
@@ -10,7 +10,11 @@ export const GOAL_COLOR_NAMES: Record<GoalColor, string> = {
 	orange: 'Оранжевый',
 	teal: 'Бирюзовый',
 	amber: 'Жёлтый',
-	slate: 'Серый'
+	slate: 'Серый',
+	red: 'Красный',
+	lime: 'Салатовый',
+	sky: 'Голубой',
+	brown: 'Коричневый'
 };
 
 export const GOAL_ICONS = {
@@ -25,7 +29,19 @@ export const GOAL_ICONS = {
 	code: '💻',
 	world: '🌍',
 	write: '✍️',
-	run: '🏃'
+	run: '🏃',
+	star: '⭐',
+	heart: '❤️',
+	home: '🏠',
+	idea: '💡',
+	science: '🔬',
+	game: '🎮',
+	cook: '🍳',
+	camera: '📷',
+	plant: '🌱',
+	money: '💰',
+	health: '🩺',
+	rocket: '🚀'
 } as const;
 export type GoalIcon = keyof typeof GOAL_ICONS;
 export const GOAL_ICON_KEYS = Object.keys(GOAL_ICONS) as GoalIcon[];
@@ -41,7 +57,19 @@ export const GOAL_ICON_NAMES: Record<GoalIcon, string> = {
 	code: 'Программирование',
 	world: 'Путешествия',
 	write: 'Письмо',
-	run: 'Бег'
+	run: 'Бег',
+	star: 'Звезда',
+	heart: 'Сердце',
+	home: 'Дом',
+	idea: 'Идея',
+	science: 'Наука',
+	game: 'Игры',
+	cook: 'Кулинария',
+	camera: 'Фото',
+	plant: 'Растения',
+	money: 'Деньги',
+	health: 'Здоровье',
+	rocket: 'Ракета'
 };
 
 export const isGoalColor = (v: unknown): v is GoalColor => typeof v === 'string' && (GOAL_COLORS as readonly string[]).includes(v);

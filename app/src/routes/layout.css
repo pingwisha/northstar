@@ -169,6 +169,10 @@ html.dark {
 .goal-teal { --goal: oklch(0.58 0.11 195); }
 .goal-amber { --goal: oklch(0.72 0.15 85); }
 .goal-slate { --goal: oklch(0.52 0.03 258); }
+.goal-red { --goal: oklch(0.56 0.2 27); }
+.goal-lime { --goal: oklch(0.66 0.17 125); }
+.goal-sky { --goal: oklch(0.65 0.13 230); }
+.goal-brown { --goal: oklch(0.5 0.07 60); }
 .dark .goal-blue { --goal: oklch(0.74 0.12 250); }
 .dark .goal-violet { --goal: oklch(0.76 0.13 295); }
 .dark .goal-green { --goal: oklch(0.78 0.14 155); }
@@ -177,6 +181,10 @@ html.dark {
 .dark .goal-teal { --goal: oklch(0.78 0.1 195); }
 .dark .goal-amber { --goal: oklch(0.84 0.13 90); }
 .dark .goal-slate { --goal: oklch(0.74 0.03 258); }
+.dark .goal-red { --goal: oklch(0.74 0.14 25); }
+.dark .goal-lime { --goal: oklch(0.84 0.16 125); }
+.dark .goal-sky { --goal: oklch(0.8 0.1 230); }
+.dark .goal-brown { --goal: oklch(0.72 0.07 60); }
 
 /* ── The person's accent colour and text size (set from the settings page, kept in the browser). ── */
 html[data-accent='violet'] { --primary: oklch(0.52 0.19 295); --ring: oklch(0.6 0.15 295); }
@@ -189,6 +197,13 @@ html.dark[data-accent='green'] { --primary: oklch(0.78 0.14 155); --primary-fore
 html.dark[data-accent='rose'] { --primary: oklch(0.76 0.13 10); --primary-foreground: oklch(0.2 0.04 10); }
 html.dark[data-accent='orange'] { --primary: oklch(0.78 0.13 60); --primary-foreground: oklch(0.2 0.04 60); }
 html.dark[data-accent='teal'] { --primary: oklch(0.78 0.1 195); --primary-foreground: oklch(0.2 0.04 195); }
+html[data-accent='custom'] { --primary: oklch(0.5 0.15 var(--hue, 255)); --ring: oklch(0.6 0.12 var(--hue, 255)); }
+html.dark[data-accent='custom'] { --primary: oklch(0.76 0.13 var(--hue, 255)); --primary-foreground: oklch(0.2 0.04 var(--hue, 255)); }
+/* The text font: only fonts the device already has, so nothing is downloaded. */
+html[data-font='serif'] { font-family: Georgia, 'Times New Roman', serif; }
+html[data-font='rounded'] { font-family: ui-rounded, 'Varela Round', 'Nunito', 'Trebuchet MS', sans-serif; }
+html[data-font='hand'] { font-family: 'Comic Sans MS', 'Comic Neue', 'Segoe Print', cursive; }
+html[data-font='mono'] { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
 html[data-size='large'] { font-size: 18px; }
 html[data-size='xlarge'] { font-size: 20px; }
 

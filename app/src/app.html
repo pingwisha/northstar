@@ -18,7 +18,14 @@
 			try {
 				var accent = localStorage.getItem('accent');
 				var size = localStorage.getItem('size');
+				var font = localStorage.getItem('font');
+				var hue = localStorage.getItem('hue');
 				if (/^(violet|green|rose|orange|teal)$/.test(accent || '')) document.documentElement.setAttribute('data-accent', accent);
+				if (accent === 'custom' && /^\d{1,3}$/.test(hue || '') && Number(hue) < 360) {
+					document.documentElement.setAttribute('data-accent', 'custom');
+					document.documentElement.style.setProperty('--hue', hue);
+				}
+				if (/^(serif|rounded|hand|mono)$/.test(font || '')) document.documentElement.setAttribute('data-font', font);
 				if (/^(large|xlarge)$/.test(size || '')) document.documentElement.setAttribute('data-size', size);
 			} catch (e) {}
 		</script>

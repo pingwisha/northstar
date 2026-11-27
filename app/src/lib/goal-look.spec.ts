@@ -15,6 +15,8 @@ describe('goal look', () => {
 	it('hands out colours in turn', () => {
 		expect(nextColor(0)).toBe(GOAL_COLORS[0]);
 		expect(nextColor(GOAL_COLORS.length)).toBe(GOAL_COLORS[0]);
-		expect(GOAL_ICON_KEYS.length).toBeGreaterThan(8);
+		expect(GOAL_ICON_KEYS.length).toBe(24);
+		expect(GOAL_COLORS.length).toBe(12);
+		expect(GOAL_ICON_KEYS).toContain('home');
 	});
 });

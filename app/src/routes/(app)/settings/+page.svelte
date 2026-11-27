@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { onMount, tick } from 'svelte';
-	import { ACCENTS, SIZES, applyAppearance, readAppearance, type Accent, type TextSize } from '$lib/appearance';
+	import { ACCENTS, DEFAULT_HUE, FONTS, SIZES, applyAppearance, readAppearance, type AccentChoice, type Font, type TextSize } from '$lib/appearance';
 	import { applyTheme, readTheme, type Theme } from '$lib/theme';
 	import ProgressRing from '$lib/components/ProgressRing.svelte';
 
-	let accent = $state<Accent>('blue');
+	let accent = $state<AccentChoice>('blue');
+	let hue = $state(DEFAULT_HUE);
+	let font = $state<Font>('normal');
 	let size = $state<TextSize>('normal');
 	let theme = $state<Theme>('auto');
 	let { data, form } = $props();
@@ -21,7 +23,7 @@
 	let sender: HTMLFormElement | undefined = $state();
 
 	onMount(async () => {
-		({ accent, size } = readAppearance());
+		({ accent, hue, size, font } = readAppearance());
 		theme = readTheme();
 		hour = data.defaultHour;
 		zone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? '';
@@ -78,8 +80,11 @@
 		{ key: 'light', name: 'Светлая' },
 		{ key: 'dark', name: 'Тёмная' }
 	];
-	const pickAccent = (a: Accent) => ((accent = a), applyAppearance(accent, size));
-	const pickSize = (s: TextSize) => ((size = s), applyAppearance(accent, size));
+	const apply = () => applyAppearance({ accent, hue, size, font });
+	const pickAccent = (a: AccentChoice) => ((accent = a), apply());
+	const pickHue = (h: number) => ((hue = h), (accent = 'custom'), apply());
+	const pickSize = (s: TextSize) => ((size = s), apply());
+	const pickFont = (f: Font) => ((font = f), apply());
 	const pickTheme = (t: Theme) => ((theme = t), applyTheme(t));
 	const chip = 'flex h-11 cursor-pointer items-center justify-center rounded-md border px-4 text-sm transition-colors';
 	const on = 'border-primary bg-primary/10 text-primary font-medium';
@@ -118,6 +123,20 @@
 				</button>
 			{/each}
 		</div>
+		<label class="flex flex-col gap-2 text-sm">
+			Свой цвет кнопок: двигай ползунок{accent === 'custom' ? '' : ' (пока выбран готовый цвет)'}
+			<input type="range" min="0" max="359" step="1" value={hue} oninput={(e) => pickHue(Number(e.currentTarget.value))} aria-label="Свой оттенок кнопок" data-testid="hue" class="h-8 w-full" style="accent-color: oklch(0.55 0.15 {hue})" />
+		</label>
+	</section>
+
+	<section class="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm" aria-labelledby="font-h">
+		<h2 id="font-h" class="text-lg font-semibold">Шрифт текста</h2>
+		<div class="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="font-h">
+			{#each FONTS as f (f.key)}
+				<button type="button" role="radio" aria-checked={font === f.key} class="{chip} {font === f.key ? on : ''}" style:font-family={f.stack} data-testid="font-{f.key}" onclick={() => pickFont(f.key)}>{f.name}</button>
+			{/each}
+		</div>
+		<p class="text-xs text-muted-foreground">Берутся шрифты, которые уже есть на устройстве, поэтому на разных устройствах вид может немного отличаться.</p>
 	</section>
 
 	<section class="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm" aria-labelledby="size-h">
