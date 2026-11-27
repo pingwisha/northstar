@@ -1,4 +1,5 @@
 import { error, fail } from '@sveltejs/kit';
+import { todayIso } from '$lib/goals';
 import { MAX_MISTAKES_TOTAL, parseMistake } from '$lib/mistakes';
 import { buildQuizMessages, MAX_QUIZ_QUESTIONS, MAX_QUIZ_TOPIC, parseQuiz } from '$lib/quiz';
 import { askAi, type AiResult } from '$lib/server/ai';
@@ -79,7 +80,7 @@ export const actions: Actions = {
 		const parsed = parseMistake({ topic: field(data, 'topic'), note: field(data, 'question') });
 		if (!parsed.ok) return fail(400, { action: 'miss', message: parsed.message });
 		if ((await me.countMistakes()) >= MAX_MISTAKES_TOTAL) return fail(400, { action: 'miss', message: `В тетради уже ${MAX_MISTAKES_TOTAL} записей. Удали старые.` });
-		if (!(await me.addMistake(goalId, parsed.value))) return fail(404, { action: 'miss', message: 'Такой цели нет.' });
+		if (!(await me.addMistake(goalId, parsed.value, todayIso(undefined, locals.timezone)))) return fail(404, { action: 'miss', message: 'Такой цели нет.' });
 		return { action: 'miss', ok: true };
 	}
 };

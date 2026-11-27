@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { frequentTopics, parseMistake, type Mistake } from './mistakes';
+import { firstReview, frequentTopics, nextReview, parseMistake, type Mistake } from './mistakes';
 
 const m = (topic: string, fixedAt: string | null = null): Mistake => ({ id: topic + Math.random(), goalId: 'g', topic, note: null, createdAt: '2026-11-20', fixedAt });
 
@@ -24,4 +24,21 @@ describe('frequentTopics', () => {
 		]);
 	});
 	it('is empty when nothing repeats', () => expect(frequentTopics([m('А'), m('Б')])).toEqual([]));
+});
+
+describe('spaced review', () => {
+	it('starts tomorrow', () => {
+		expect(firstReview('2026-11-27')).toEqual({ step: 0, due: '2026-11-28' });
+		expect(firstReview('2026-12-31')).toEqual({ step: 0, due: '2027-01-01' });
+	});
+	it('moves 1 -> 3 -> 7 days on "remembered" and then ends', () => {
+		const a = nextReview(0, true, '2026-11-28');
+		expect(a).toEqual({ step: 1, due: '2026-12-01' });
+		const b = nextReview(a.step, true, '2026-12-01');
+		expect(b).toEqual({ step: 2, due: '2026-12-08' });
+		expect(nextReview(b.step, true, '2026-12-08')).toEqual({ step: 3, due: null });
+	});
+	it('starts over on "not remembered", from any step', () => {
+		expect(nextReview(2, false, '2026-12-08')).toEqual({ step: 0, due: '2026-12-09' });
+	});
 });

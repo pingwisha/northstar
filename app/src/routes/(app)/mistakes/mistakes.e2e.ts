@@ -28,3 +28,17 @@ test('a person writes down a mistake, marks it fixed and finds it again', async 
 	const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 	expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test('a mistake that is due comes back on the home page and goes after "remembered"', async ({ page, context }) => {
+	seedDb(`INSERT OR IGNORE INTO goals (id, user_id, title, start_date, deadline) VALUES ('mk-g', '${E2E.exam.id}', 'Сдать ОГЭ', '${todayIso()}', '2030-01-01')`);
+	seedDb(`DELETE FROM mistakes WHERE id = 'mk-review'`);
+	seedDb(`INSERT INTO mistakes (id, user_id, goal_id, topic, review_step, review_due) VALUES ('mk-review', '${E2E.exam.id}', 'mk-g', 'Степени', 0, '${todayIso()}')`);
+	await signInAs(context, E2E.exam);
+	await page.goto('/');
+	const item = page.getByTestId('review').filter({ hasText: 'Степени' });
+	await expect(item).toBeVisible();
+	await expect(async () => {
+		await item.getByRole('button', { name: 'Вспомнил', exact: true }).click();
+		await expect(page.getByTestId('review').filter({ hasText: 'Степени' })).toHaveCount(0, { timeout: 1500 });
+	}).toPass({ timeout: 20000 });
+});

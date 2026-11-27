@@ -1,4 +1,5 @@
 import { error, fail } from '@sveltejs/kit';
+import { todayIso } from '$lib/goals';
 import { frequentTopics, MAX_MISTAKES_TOTAL, parseMistake } from '$lib/mistakes';
 import { scoped } from '$lib/server/db';
 import { appEnv } from '$lib/server/env';
@@ -34,14 +35,14 @@ export const actions: Actions = {
 		const parsed = parseMistake(values);
 		if (!parsed.ok) return fail(400, { action: 'add', message: parsed.message, values });
 		if ((await me.countMistakes()) >= MAX_MISTAKES_TOTAL) return fail(400, { action: 'add', message: `Можно хранить не больше ${MAX_MISTAKES_TOTAL} записей. Удали старые.`, values });
-		if (!(await me.addMistake(values.goalId, parsed.value))) return fail(404, { action: 'add', message: 'Выбери цель из списка.', values });
+		if (!(await me.addMistake(values.goalId, parsed.value, todayIso(undefined, locals.timezone)))) return fail(404, { action: 'add', message: 'Выбери цель из списка.', values });
 		return { action: 'add', ok: true };
 	},
 
 	fix: async ({ request, locals, platform }) => {
 		const me = await mine(locals, platform);
 		const data = await request.formData();
-		if (!(await me.setMistakeFixed(field(data, 'id'), field(data, 'fixed') === '1'))) return fail(404, { action: 'fix', message: 'Такой записи нет.' });
+		if (!(await me.setMistakeFixed(field(data, 'id'), field(data, 'fixed') === '1', todayIso(undefined, locals.timezone)))) return fail(404, { action: 'fix', message: 'Такой записи нет.' });
 		return { action: 'fix', ok: true };
 	},
 

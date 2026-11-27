@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import AddTask from '$lib/components/AddTask.svelte';
 	import TaskRow from '$lib/components/TaskRow.svelte';
 	import ProgressRing from '$lib/components/ProgressRing.svelte';
@@ -116,6 +117,29 @@
 			<a href="/exam" class="text-primary underline underline-offset-2">Режим экзамена</a>
 			<a href="/mistakes" class="text-primary underline underline-offset-2">Тетрадь ошибок</a>
 		</div>
+
+		{#if data.reviews.length}
+			<section class="flex flex-col gap-3 rounded-xl border bg-primary/10 p-4" aria-labelledby="review-title" data-testid="reviews">
+				<h2 id="review-title" class="text-xl font-semibold">Повторить сегодня</h2>
+				<p class="text-sm text-muted-foreground">Ошибки из тетради возвращаются через 1, 3 и 7 дней. Вспомни, как правильно, и отметь.</p>
+				<ul class="flex flex-col gap-2">
+					{#each data.reviews as r (r.id)}
+						<li class="flex flex-col gap-2 rounded-lg border bg-card p-3" data-testid="review">
+							<div class="flex flex-col">
+								<span class="font-medium">{r.topic}</span>
+								<span class="text-xs text-muted-foreground">{r.goalTitle}</span>
+								{#if r.note}<p class="mt-1 whitespace-pre-line text-sm">{r.note}</p>{/if}
+							</div>
+							<form method="POST" action="?/review" use:enhance class="flex gap-2">
+								<input type="hidden" name="id" value={r.id} />
+								<button type="submit" name="remembered" value="1" class="h-11 flex-1 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">Вспомнил</button>
+								<button type="submit" name="remembered" value="0" class="h-11 flex-1 rounded-md border px-4 text-sm font-medium">Не вспомнил</button>
+							</form>
+						</li>
+					{/each}
+				</ul>
+			</section>
+		{/if}
 
 		{#if form && 'message' in form && form.message && form.action !== 'addTask'}
 			<p role="alert" class="text-sm text-destructive">{form.message}</p>

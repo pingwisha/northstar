@@ -5,7 +5,7 @@
 
 import type { PlanMaterial, PlanStage, ScheduledStage } from '$lib/plan';
 import type { NewTrial, Trial } from '$lib/trials';
-import type { Mistake, NewMistake } from '$lib/mistakes';
+import { firstReview, nextReview, type Mistake, type NewMistake } from '$lib/mistakes';
 
 export type Role = 'owner' | 'member';
 
@@ -133,7 +133,7 @@ export function scoped(db: D1Database, userId: string) {
 				trials: await all('SELECT id, goal_id, taken_on, title, score, max_score, weak_topics FROM trials WHERE user_id = ? ORDER BY taken_on, rowid'),
 				pushSubscriptions: await all('SELECT endpoint, timezone, hour, created_at FROM push_subscriptions WHERE user_id = ?'),
 				planDrafts: await all('SELECT goal_id, plan, missing, created_at FROM plan_drafts WHERE user_id = ?'),
-				mistakes: await all('SELECT id, goal_id, topic, note, created_at, fixed_at FROM mistakes WHERE user_id = ? ORDER BY created_at, rowid'),
+				mistakes: await all('SELECT id, goal_id, topic, note, created_at, fixed_at, review_step, review_due FROM mistakes WHERE user_id = ? ORDER BY created_at, rowid'),
 				chatMessages: await all('SELECT chat_id, role, content, created_at FROM chat_messages WHERE user_id = ? ORDER BY created_at, rowid')
 			};
 		},
@@ -253,17 +253,60 @@ export function scoped(db: D1Database, userId: string) {
 		},
 
 		// A mistake goes only to one of the person's active goals.
-		async addMistake(goalId: string, m: NewMistake): Promise<boolean> {
+		async addMistake(goalId: string, m: NewMistake, today: string): Promise<boolean> {
 			const goal = await db.prepare("SELECT id FROM goals WHERE id = ? AND user_id = ? AND status = 'active'").bind(goalId, userId).first();
 			if (!goal) return false;
-			await db.prepare('INSERT INTO mistakes (id, user_id, goal_id, topic, note) VALUES (?, ?, ?, ?, ?)').bind(crypto.randomUUID(), userId, goalId, m.topic, m.note).run();
+			const review = firstReview(today);
+			await db
+				.prepare('INSERT INTO mistakes (id, user_id, goal_id, topic, note, review_step, review_due) VALUES (?, ?, ?, ?, ?, ?, ?)')
+				.bind(crypto.randomUUID(), userId, goalId, m.topic, m.note, review.step, review.due)
+				.run();
 			return true;
 		},
 
-		async setMistakeFixed(id: string, fixed: boolean): Promise<boolean> {
+		// Reopening a fixed mistake starts its review cycle again.
+		async setMistakeFixed(id: string, fixed: boolean, today: string): Promise<boolean> {
+			const review = firstReview(today);
 			const r = await db
-				.prepare("UPDATE mistakes SET fixed_at = CASE WHEN ?1 THEN COALESCE(fixed_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) ELSE NULL END WHERE id = ?2 AND user_id = ?3")
-				.bind(fixed ? 1 : 0, id, userId)
+				.prepare(
+					`UPDATE mistakes SET
+						fixed_at = CASE WHEN ?1 THEN COALESCE(fixed_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) ELSE NULL END,
+						review_step = CASE WHEN ?1 OR fixed_at IS NULL THEN review_step ELSE ?4 END,
+						review_due = CASE WHEN ?1 OR fixed_at IS NULL THEN review_due ELSE ?5 END
+					WHERE id = ?2 AND user_id = ?3`
+				)
+				.bind(fixed ? 1 : 0, id, userId, review.step, review.due)
+				.run();
+			return (r.meta.changes ?? 0) > 0;
+		},
+
+		// Unfixed mistakes whose review day has come, oldest due first, at most `limit`.
+		async listDueReviews(today: string, limit: number): Promise<{ id: string; topic: string; note: string | null; goalTitle: string; step: number }[]> {
+			const rows = (
+				await db
+					.prepare(
+						`SELECT m.id, m.topic, m.note, g.title AS goal_title, m.review_step
+						FROM mistakes m JOIN goals g ON g.id = m.goal_id
+						WHERE m.user_id = ? AND m.fixed_at IS NULL AND m.review_due IS NOT NULL AND m.review_due <= ?
+						ORDER BY m.review_due, m.created_at, m.rowid LIMIT ?`
+					)
+					.bind(userId, today, limit)
+					.all<{ id: string; topic: string; note: string | null; goal_title: string; review_step: number }>()
+			).results;
+			return rows.map((r) => ({ id: r.id, topic: r.topic, note: r.note, goalTitle: r.goal_title, step: r.review_step }));
+		},
+
+		// Only a mistake that is unfixed and due can be marked; the check on the old step keeps a double click from skipping an interval.
+		async reviewMistake(id: string, remembered: boolean, today: string): Promise<boolean> {
+			const row = await db
+				.prepare('SELECT review_step FROM mistakes WHERE id = ? AND user_id = ? AND fixed_at IS NULL AND review_due IS NOT NULL AND review_due <= ?')
+				.bind(id, userId, today)
+				.first<{ review_step: number }>();
+			if (!row) return false;
+			const next = nextReview(row.review_step, remembered, today);
+			const r = await db
+				.prepare('UPDATE mistakes SET review_step = ?, review_due = ? WHERE id = ? AND user_id = ? AND review_step = ? AND fixed_at IS NULL')
+				.bind(next.step, next.due, id, userId, row.review_step)
 				.run();
 			return (r.meta.changes ?? 0) > 0;
 		},

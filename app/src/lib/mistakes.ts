@@ -40,3 +40,29 @@ export function frequentTopics(mistakes: Mistake[], limit = 3): { topic: string;
 	}
 	return [...counts.values()].filter((e) => e.count > 1).sort((a, b) => b.count - a.count || a.topic.localeCompare(b.topic)).slice(0, limit);
 }
+
+// Spaced review: a mistake returns after these many days, one interval per "remembered" mark.
+export const REVIEW_INTERVALS = [1, 3, 7] as const;
+export const MAX_REVIEWS_SHOWN = 5;
+
+export interface ReviewState {
+	step: number;
+	due: string | null;
+}
+
+export function addDaysIso(iso: string, n: number): string {
+	return new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+}
+
+// The first review of a new (or reopened) mistake: tomorrow.
+export function firstReview(today: string): ReviewState {
+	return { step: 0, due: addDaysIso(today, REVIEW_INTERVALS[0]) };
+}
+
+// After a mark: "remembered" moves to the next interval (the last one ends the cycle), "not remembered" starts over.
+export function nextReview(step: number, remembered: boolean, today: string): ReviewState {
+	if (!remembered) return firstReview(today);
+	const next = step + 1;
+	if (next >= REVIEW_INTERVALS.length) return { step: REVIEW_INTERVALS.length, due: null };
+	return { step: next, due: addDaysIso(today, REVIEW_INTERVALS[next]) };
+}
