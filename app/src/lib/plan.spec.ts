@@ -6,7 +6,7 @@ const task = (title: string, weight = 1) => ({ title, weight, materials: [] });
 const stages = (counts: number[], weight = 1): PlanStage[] => counts.map((n, i) => ({ title: `Этап ${i + 1}`, tasks: Array.from({ length: n }, (_, j) => task(`Задача ${i + 1}.${j + 1}`, weight)) }));
 
 describe('parsePlan', () => {
-	const ok = { stages: [{ title: 'Основы', tasks: [{ title: 'Прочитать главу', weight: 2, materials: [{ kind: 'video', title: 'Урок', url: 'https://example.com/a', source: 'Канал' }] }] }] };
+	const ok = { stages: [{ title: 'Основы', tasks: [{ title: 'Прочитать главу', weight: 2, materials: [] }] }] };
 
 	it('reads a valid plan, also inside a code fence', () => {
 		for (const raw of [JSON.stringify(ok), '```json\n' + JSON.stringify(ok) + '\n```']) {
@@ -31,18 +31,12 @@ describe('parsePlan', () => {
 		if (!r.ok) throw new Error(r.error);
 		expect(r.stages[0].title).toBe('Старт');
 		expect(r.stages[0].tasks[0]).toMatchObject({ title: 'Решить 5 штук', weight: 1 });
-		expect(r.stages[0].tasks[0].materials[0].kind).toBe('other');
 	});
 
-	it('keeps only https links and drops materials with neither a link nor a hint', () => {
-		const r = parsePlan(JSON.stringify({ stages: [{ title: 'A', tasks: [{ title: 'x', materials: [
-			{ kind: 'article', title: 'http', url: 'http://example.com', source: 'Сайт' },
-			{ kind: 'article', title: 'junk', url: 'not a link', source: null },
-			{ kind: 'article', title: 'ok', url: 'https://example.com/x' },
-			{ title: '' }
-		] }] }] }));
+	it('ignores materials inside the plan answer: they are asked for separately', () => {
+		const r = parsePlan(JSON.stringify({ stages: [{ title: 'A', tasks: [{ title: 'x', materials: [{ kind: 'article', title: 'ok', url: 'https://example.com/x' }] }] }] }));
 		if (!r.ok) throw new Error(r.error);
-		expect(r.stages[0].tasks[0].materials.map((m) => [m.title, m.url])).toEqual([['http', null], ['ok', 'https://example.com/x']]);
+		expect(r.stages[0].tasks[0].materials).toEqual([]);
 	});
 });
 
@@ -96,16 +90,28 @@ describe('targetTaskCount', () => {
 });
 
 describe('parseMaterials', () => {
-	it('gives one list per task, in order, and empty lists for anything unusable', () => {
-		const raw = JSON.stringify({ materials: [[{ kind: 'article', title: 'А', url: 'https://example.com/a' }], 'мусор'] });
+	it('builds the address from a listed site, one list per task, empty lists for anything unusable', () => {
+		const raw = JSON.stringify({ materials: [[{ kind: 'trainer', title: 'Задания', site: 'oge-sdamgia', query: 'дроби' }], 'мусор'] });
 		const r = parseMaterials(raw, 3);
 		expect(r.map((l) => l.length)).toEqual([1, 0, 0]);
+		expect(r[0][0]).toEqual({ kind: 'trainer', title: 'Задания', url: 'https://oge.sdamgia.ru/search?search=' + encodeURIComponent('дроби'), source: 'Решу ОГЭ' });
 		expect(parseMaterials('не json', 2)).toEqual([[], []]);
 		expect(parseMaterials('{"x":1}', 1)).toEqual([[]]);
 	});
 
+	it('never takes an address written by the AI, and drops a site that is not in the list', () => {
+		const raw = JSON.stringify({ materials: [[
+			{ kind: 'article', title: 'Выдумка', url: 'https://evil.example/x', source: 'Блог' },
+			{ kind: 'article', title: 'Чужой сайт', site: 'evil', query: 'x', url: 'https://evil.example/y' },
+			{ kind: 'article', title: 'Смесь', site: 'khan', query: 'дроби', url: 'https://evil.example/z' }
+		]] });
+		const r = parseMaterials(raw, 1)[0];
+		expect(r.map((m) => m.title)).toEqual(['Смесь']);
+		expect(r[0].url?.startsWith('https://ru.khanacademy.org/')).toBe(true);
+	});
+
 	it('keeps at most three materials per task', () => {
-		const many = Array.from({ length: 6 }, (_, i) => ({ kind: 'other', title: `М${i}`, source: 'поиск' }));
+		const many = Array.from({ length: 6 }, (_, i) => ({ kind: 'other', title: `М${i}`, site: 'youtube', query: 'тема' }));
 		expect(parseMaterials(JSON.stringify({ materials: [many] }), 1)[0]).toHaveLength(3);
 	});
 });

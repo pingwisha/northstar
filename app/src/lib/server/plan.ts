@@ -5,44 +5,10 @@ import { askAi, type AiCaller, type AiEnv } from './ai';
 
 const PLAN_TIMEOUT_MS = 90_000;
 const PLAN_MAX_TOKENS = 8192;
-const LINK_TIMEOUT_MS = 5_000;
-const MAX_LINK_CHECKS = 30;
-// Sites that refuse robots answer with these even when the page exists, so they do not count as broken.
-const NOT_PROOF_OF_BROKEN = new Set([401, 403, 405, 429, 999]);
-
 export type PlanError = 'not_available' | 'not_configured' | 'limit_reached' | 'service_busy' | 'ai_unavailable' | 'bad_answer' | 'deadline_passed';
 
-export async function linkWorks(url: string, send: typeof fetch): Promise<boolean> {
-	try {
-		const res = await send(url, { method: 'GET', redirect: 'follow', signal: AbortSignal.timeout(LINK_TIMEOUT_MS), headers: { 'user-agent': 'Mozilla/5.0 (compatible; NorthstarLinkCheck)' } });
-		void res.body?.cancel();
-		return res.status < 400 || NOT_PROOF_OF_BROKEN.has(res.status);
-	} catch {
-		return false;
-	}
-}
-
-// The AI cannot be trusted with web addresses, so each one is opened. A material whose link
-// fails keeps only its hint on where to look; with no hint it is dropped. Links beyond the
-// check budget are not shown: an unchecked link is treated like a failed one.
-export async function verifyLinks(stages: PlanStage[], send: typeof fetch = fetch): Promise<PlanStage[]> {
-	const urls = [...new Set(stages.flatMap((s) => s.tasks.flatMap((t) => t.materials.map((m) => m.url)).filter((u): u is string => u !== null)))];
-	const good = new Set<string>();
-	const results = await Promise.all(urls.slice(0, MAX_LINK_CHECKS).map(async (u) => [u, await linkWorks(u, send)] as const));
-	for (const [u, ok] of results) if (ok) good.add(u);
-	return stages.map((s) => ({
-		title: s.title,
-		tasks: s.tasks.map((t) => ({
-			...t,
-			materials: t.materials
-				.map((m) => (m.url && !good.has(m.url) ? { ...m, url: null } : m))
-				.filter((m) => m.url !== null || m.source !== null)
-		}))
-	}));
-}
-
-// Second step, run per stage after the plan is shown: the AI names materials, every address is
-// opened, and a task with no working page gets the search link. A stage the AI cannot answer
+// Second step, run per stage after the plan is shown: the AI picks sites from the verified list
+// (the code builds the addresses), and a task with no material gets the search link. A stage the AI cannot answer
 // still gets search links, so the plan is never left bare. Only a spent limit is an error.
 export async function fillStageMaterials(
 	env: AiEnv,
@@ -55,7 +21,7 @@ export async function fillStageMaterials(
 	if (!answer.ok && (answer.error === 'limit_reached' || answer.error === 'service_busy' || answer.error === 'not_available')) return { ok: false, error: answer.error };
 	const found = answer.ok ? parseMaterials(answer.content, stage.tasks.length) : null;
 	const withMaterials: PlanStage = { ...stage, tasks: stage.tasks.map((t, j) => ({ ...t, materials: found?.[j] ?? t.materials })) };
-	const [checked] = withSearchLinks(goal.title, await verifyLinks([withMaterials], send));
+	const [checked] = withSearchLinks(goal.title, [withMaterials]);
 	return { ok: true, stage: checked };
 }
 

@@ -3,7 +3,7 @@ import type { Miniflare } from 'miniflare';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { actions, load } from '../src/routes/(app)/goals/+page.server';
 import { scoped } from '../src/lib/server/db';
-import { fillStageMaterials, generatePlan, verifyLinks } from '../src/lib/server/plan';
+import { fillStageMaterials, generatePlan } from '../src/lib/server/plan';
 import { AI_BASE_URL, usedToday } from '../src/lib/server/ai';
 import { makeDb } from './helpers';
 
@@ -31,7 +31,7 @@ const aiPlan = {
 };
 
 const materialsFor: Record<string, unknown> = {
-	Основы: { materials: [[{ kind: 'article', title: 'Хорошая статья', url: 'https://good.example/a', source: 'Блог' }, { kind: 'video', title: 'Выдуманное видео', url: 'https://fake.example/v', source: 'Поиск: видео про тему' }, { kind: 'trainer', title: 'Выдуманный тренажёр', url: 'https://fake.example/t', source: null }], []] },
+	Основы: { materials: [[{ kind: 'article', title: 'Хорошая статья', site: 'khan', query: 'глава 1' }, { kind: 'video', title: 'Видео', site: 'youtube', query: 'глава 1' }, { kind: 'trainer', title: 'Выдуманный тренажёр', site: 'nosuch', query: 'x', url: 'https://fake.example/t' }], []] },
 	Практика: { materials: [[]] }
 };
 
@@ -54,19 +54,17 @@ function web(structure: unknown = JSON.stringify(aiPlan), materials: (stage: str
 }
 const env = () => ({ DB: db, GEMINI_API_KEY: 'k' });
 
-describe('verifyLinks', () => {
-	it('keeps working links, turns dead ones into hints and drops dead ones without a hint', async () => {
+describe('fillStageMaterials', () => {
+	it('builds addresses from the site list and drops what the AI invented', async () => {
 		const stage = { ...aiPlan.stages[0], tasks: aiPlan.stages[0].tasks.map((t) => ({ ...t, materials: [] })) };
 		const filled = await fillStageMaterials(env(), owner, goal, stage, web() as unknown as typeof fetch);
 		if (!filled.ok) throw new Error(filled.error);
 		const m = filled.stage.tasks[0].materials;
-		expect(m.map((x: { title: string; url: string | null }) => [x.title, x.url])).toEqual([['Хорошая статья', 'https://good.example/a'], ['Выдуманное видео', null]]);
-	});
-
-	it('does not treat a robot-blocking answer as a broken link', async () => {
-		const blocked = vi.fn(async () => new Response('no', { status: 403 }));
-		const out = await verifyLinks([{ title: 'A', tasks: [{ title: 't', weight: 1, materials: [{ kind: 'article', title: 'x', url: 'https://x.example', source: null }] }] }], blocked as unknown as typeof fetch);
-		expect(out[0].tasks[0].materials[0].url).toBe('https://x.example');
+		expect(m.map((x) => [x.title, x.url])).toEqual([
+			['Хорошая статья', 'https://ru.khanacademy.org/search?page_search_query=' + encodeURIComponent('глава 1')],
+			['Видео', 'https://www.youtube.com/results?search_query=' + encodeURIComponent('глава 1')]
+		]);
+		expect(JSON.stringify(filled.stage)).not.toContain('fake.example');
 	});
 });
 
@@ -196,7 +194,7 @@ describe('the plan action', () => {
 		expect((await scoped(db, 'o').listDrafts())[0].missing).toBe(2);
 		expect(await call('materials', 'o', 'owner', id, [['stage', '0']])).toMatchObject({ ok: true });
 		let draft = (await scoped(db, 'o').listDrafts())[0];
-		expect(draft.stages[0].tasks[0].materials.map((m) => m.url)).toEqual(['https://good.example/a', null]);
+		expect(draft.stages[0].tasks[0].materials.map((m) => m.title)).toEqual(['Хорошая статья', 'Видео']);
 		expect(draft.missing).toBe(1);
 		const calls = send.mock.calls.length;
 		await call('materials', 'o', 'owner', id, [['stage', '0']]);
@@ -221,7 +219,7 @@ describe('the plan action', () => {
 		expect(await pendingOf()).toBeUndefined();
 		const first = (await tasksOf('o')).find((t) => t.title === 'Прочитать главу 1')!;
 		const mine = (await scoped(db, 'o').listMaterials()).filter((m) => m.task_id === first.id);
-		expect(mine.map((m) => m.url)).toEqual(['https://good.example/a', null]);
+		expect(mine.map((m) => m.title)).toEqual(['Хорошая статья', 'Видео']);
 		expect(await scoped(db, 'm').listMaterials()).toHaveLength(0);
 	});
 

@@ -2,6 +2,7 @@
 // the dates come from code, so every task is guaranteed to fall before the deadline.
 import { daysUntil } from './progress';
 import { ALL_DAYS, MAX_TITLE, isValidStudyDays } from './goals';
+import { buildMaterialUrl, findSite, siteListForPrompt } from './sites';
 import { plainText } from './ai-text';
 
 export const MAX_STAGES = 8;
@@ -66,9 +67,11 @@ export function buildPlanMessages(goal: { title: string; description: string | n
 export function buildMaterialsMessages(goal: { title: string }, stage: PlanStage) {
 	const system = [
 		'Ты подбираешь учебные материалы к задачам плана. Отвечай только одним JSON объектом, без пояснений.',
-		'Формат: {"materials":[[{"kind":"article","title":"...","url":"https://...","source":"..."}], []]}',
+		'Формат: {"materials":[[{"kind":"article","title":"...","site":"khan","query":"..."}], []]}',
 		'Внешний список идёт в том же порядке, что задачи, по одному вложенному списку на каждую задачу. К задаче от нуля до двух материалов. kind один из: article, video, trainer, checklist, other.',
-		'Ссылки: ставь url только если уверен, что это настоящая страница, например главная страница известного сайта или официальный документ. Если не уверен, ставь url null, а в source напиши, что искать: название сайта, книги или поисковый запрос. Никогда не выдумывай адреса.',
+		'Адреса не пиши. Выбери site только из этого списка (id: название, для чего подходит) и в query напиши короткую фразу для поиска на этом сайте:',
+		siteListForPrompt(),
+		'Если ни один сайт не подходит, оставь список для задачи пустым.',
 		'Названия пиши простым русским текстом без звёздочек, решёток, скобок и косых черт. Не придумывай факты.'
 	].join('\n');
 	const user = [`Цель: ${goal.title}`, `Этап: ${stage.title}`, 'Задачи по порядку:', ...stage.tasks.map((t, i) => `${i + 1}. ${t.title}`)].join('\n');
@@ -100,19 +103,11 @@ function parseMaterial(raw: unknown): PlanMaterial | null {
 	const title = text(raw.title, MAX_TITLE + 40);
 	if (!title) return null;
 	const kind = MATERIAL_KINDS.find((k) => k === raw.kind) ?? 'other';
-	let url: string | null = null;
-	if (typeof raw.url === 'string') {
-		try {
-			const parsed = new URL(raw.url.trim());
-			if (parsed.protocol === 'https:') url = parsed.toString();
-		} catch {
-			/* not a link: keep the material without one */
-		}
-	}
-	const source = text(raw.source, 200) || null;
-	// A material with neither a link nor a hint where to look is of no use.
-	if (!url && !source) return null;
-	return { kind, title, url, source };
+	// An address the AI wrote itself is ignored: only a site from the list can give one.
+	const url = buildMaterialUrl(raw.site, raw.query);
+	const site = findSite(raw.site);
+	if (!url || !site) return null;
+	return { kind, title, url, source: site.name };
 }
 
 // Reads the materials answer: one list per task. Anything unusable becomes an empty list.
@@ -155,11 +150,8 @@ export function parsePlan(raw: string): PlanParse {
 			const taskTitle = text(t.title, 160);
 			if (!taskTitle) return { ok: false, error: 'bad_task' };
 			const weight = Number.isInteger(t.weight) && (t.weight as number) >= 1 && (t.weight as number) <= 3 ? (t.weight as number) : 1;
-			const materials = (Array.isArray(t.materials) ? t.materials : [])
-				.slice(0, MAX_MATERIALS)
-				.map(parseMaterial)
-				.filter((m): m is PlanMaterial => m !== null);
-			tasks.push({ title: taskTitle, weight, materials });
+			// The plan answer carries no materials: they are asked for in a separate step.
+			tasks.push({ title: taskTitle, weight, materials: [] });
 		}
 		total += tasks.length;
 		stages.push({ title, tasks });
