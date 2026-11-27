@@ -5,6 +5,7 @@ import { todayIso } from '$lib/goals';
 import { MAX_OWN_MATERIALS, parseNote, parseOwnMaterial } from '$lib/materials';
 import { MAX_TASKS_TOTAL, parseOneTitle, parseTaskDay, parseTaskTitles } from '$lib/tasks';
 import { scoped } from './db';
+import { fillStageMaterials, type PlanError } from './plan';
 import { appEnv } from './env';
 
 async function mine(event: RequestEvent) {
@@ -15,6 +16,17 @@ async function mine(event: RequestEvent) {
 
 const field = (data: FormData, name: string) => String(data.get(name) ?? '');
 const NO_TASK = 'Такой задачи нет.';
+const AI_MESSAGES: Record<PlanError, string> = {
+	not_available: 'Эта функция пока недоступна.',
+	not_configured: 'ИИ ещё не подключён: нет ключа.',
+	limit_reached: 'На сегодня твой лимит запросов к ИИ исчерпан. Материалы можно добавить вручную.',
+	service_busy: 'Сегодня ИИ слишком загружен у всех. Материалы можно добавить вручную.',
+	ai_unavailable: 'ИИ сейчас не отвечает. Материалы можно добавить вручную.',
+	bad_answer: 'ИИ не смог подобрать материалы. Их можно добавить вручную.',
+	deadline_passed: 'Срок цели уже прошёл.'
+};
+// Tasks the person added by hand have no stage; these are the ones the AI finds materials for.
+export const NEEDS_MATERIALS_LIMIT = 20;
 const addDay = (iso: string, n: number): string => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 
 export const taskActions = {
@@ -38,6 +50,26 @@ export const taskActions = {
 		if (!day.ok) return fail(400, { action: 'addTask', message: day.message, values });
 		if (!(await me.addTasks(goal.id, titles.value, day.value))) return fail(404, { action: 'addTask', message: 'Выбери цель из списка.', values });
 		return { action: 'addTask', ok: true };
+	},
+
+	// Materials for the tasks the person added by hand to a goal: the AI picks pages from the verified lists.
+	fillTasks: async (event: RequestEvent) => {
+		const env = await appEnv(event.platform);
+		const me = await mine(event);
+		const goalId = field(await event.request.formData(), 'goalId');
+		const goal = (await me.listGoals()).find((g) => g.id === goalId && g.status === 'active');
+		if (!goal) return fail(404, { action: 'fillTasks', message: 'Такой цели нет.' });
+		if (!env) return fail(403, { action: 'fillTasks', message: AI_MESSAGES.not_available });
+		const have = new Set((await me.listMaterials()).map((m) => m.task_id));
+		const waiting = (await me.listGoalTasks())
+			.filter((t) => t.goal_id === goal.id && t.stage_id === null && t.completed_at === null && !have.has(t.id))
+			.slice(0, NEEDS_MATERIALS_LIMIT);
+		if (waiting.length === 0) return { action: 'fillTasks', ok: true };
+		const caller = { userId: event.locals.userId!, role: event.locals.role ?? 'member' };
+		const filled = await fillStageMaterials(env, caller, goal, { title: 'Дополнительные задачи', tasks: waiting.map((t) => ({ title: t.title, weight: t.weight, materials: [] })) });
+		if (!filled.ok) return fail(filled.error === 'not_available' ? 403 : 429, { action: 'fillTasks', message: AI_MESSAGES[filled.error] });
+		await me.addPlanMaterials(waiting.map((t, i) => ({ taskId: t.id, materials: filled.stage.tasks[i].materials })));
+		return { action: 'fillTasks', ok: true };
 	},
 
 	editTask: async (event: RequestEvent) => {

@@ -25,8 +25,14 @@ export const load: PageServerLoad = async ({ locals, platform, params }) => {
 	const group = (stageId: string | null) => tasks.filter((t) => t.stage_id === stageId).map((t) => views.get(t.id)!);
 	const built = buildStages(stageList, tasks);
 	const knownStages = new Set(built.map((s) => s.id));
+	// Tasks added by hand that still wait for the AI to find materials.
+	const have = new Set(materials.map((m) => m.task_id));
+	const needMaterials = goal.status === 'active' && tasks.some((t) => t.stage_id === null && t.completed_at === null && !have.has(t.id));
 	return {
 		today,
+		goalId: goal.id,
+		deadline: goal.deadline,
+		needMaterials,
 		card,
 		active: goal.status === 'active',
 		stages: built.map((s) => ({ ...s, tasks: group(s.id) })),

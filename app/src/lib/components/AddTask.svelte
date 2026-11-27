@@ -7,11 +7,13 @@
 		goals,
 		today,
 		day = today,
-		form
+		form,
+		label = 'Добавить задачу'
 	}: {
 		goals: { id: string; title: string; deadline: string }[];
 		today: string;
 		day?: string;
+		label?: string;
 		form?: { action?: string; message?: string; values?: { goalId: string; titles: string; day: string } } | null;
 	} = $props();
 	let open = $state(false);
@@ -23,7 +25,7 @@
 {#if goals.length}
 	<div class="flex flex-col gap-3">
 		<button type="button" class="h-11 self-start rounded-md border px-4 text-sm font-medium" aria-expanded={open || !!failed} onclick={() => (open = !open)}>
-			Добавить задачу
+			{label}
 		</button>
 		{#if open || failed}
 			<form

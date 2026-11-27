@@ -1,9 +1,33 @@
 <script lang="ts">
+	import { deserialize } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
+	import AddTask from '$lib/components/AddTask.svelte';
 	import ProgressRing from '$lib/components/ProgressRing.svelte';
 	import TaskRow from '$lib/components/TaskRow.svelte';
 	import { formatDate } from '$lib/goals';
 
-	let { data } = $props();
+	let { data, form } = $props();
+
+	// A task the person added gets its materials from the AI right after it appears.
+	let filling = $state(false);
+	let gaveUp = $state<string | null>(null);
+	$effect(() => {
+		if (!data.needMaterials || filling || gaveUp) return;
+		filling = true;
+		const body = new FormData();
+		body.set('goalId', data.goalId);
+		void (async () => {
+			try {
+				const res = await fetch('?/fillTasks', { method: 'POST', body, headers: { 'x-sveltekit-action': 'true' } });
+				const result = deserialize(await res.text());
+				if (result.type !== 'success') gaveUp = result.type === 'failure' && typeof result.data?.message === 'string' ? result.data.message : 'Материалы подобрать не удалось. Их можно добавить вручную.';
+			} catch {
+				gaveUp = 'Материалы подобрать не удалось. Их можно добавить вручную.';
+			}
+			await invalidateAll();
+			filling = false;
+		})();
+	});
 	const card = $derived(data.card);
 	const paceClass = { on_track: 'text-foreground', ahead: 'text-foreground', behind: 'text-destructive' } as const;
 </script>
@@ -59,6 +83,17 @@
 					<TaskRow {task} today={data.today} />
 				{/each}
 			</ul>
+		</section>
+	{/if}
+
+	{#if data.active}
+		<section class="flex flex-col gap-2" data-testid="edit-plan">
+			<AddTask goals={[{ id: data.goalId, title: card.title, deadline: data.deadline }]} today={data.today} {form} label="Изменить план: добавить пункт" />
+			<p class="text-sm text-muted-foreground">Напиши, что хочешь добавить в план. ИИ сам подберёт к новому пункту материалы.</p>
+			{#if data.needMaterials && !gaveUp}
+				<p role="status" class="text-sm text-muted-foreground" data-testid="materials-status">Подбираю материалы к новым задачам…</p>
+			{/if}
+			{#if gaveUp}<p role="alert" class="text-sm text-destructive">{gaveUp}</p>{/if}
 		</section>
 	{/if}
 
