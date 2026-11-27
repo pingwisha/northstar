@@ -69,6 +69,7 @@ export function buildMaterialsMessages(goal: { title: string }, stage: PlanStage
 		'Ты подбираешь учебные материалы к задачам плана. Отвечай только одним JSON объектом, без пояснений.',
 		'Формат: {"materials":[[{"kind":"trainer","title":"...","page":"id страницы"},{"kind":"article","title":"...","site":"id сайта","query":"..."}], []]}',
 		'Внешний список идёт в том же порядке, что задачи, по одному вложенному списку на каждую задачу. К задаче один или два материала, пустой список только если совсем ничего не подходит. kind один из: article, video, trainer, checklist, other.',
+		'Каждой задаче нужен конкретный материал, по которому её можно выполнить, а не общий поиск. Подумай, что нужно для выполнения задачи, и выбери страницу или сайт, где это есть. Если задача про обсуждение с ИИ или самопроверку, бери northstart-chat или northstart-check.',
 		'Адреса не пиши. Сначала ищи подходящую готовую страницу в списке страниц и ставь её id в page. Если страницы нет, выбери site из списка сайтов и в query напиши короткую фразу для поиска на этом сайте.',
 		'Для предметов ОГЭ и ЕГЭ бери сайт «Решу ОГЭ» или «Решу ЕГЭ» именно этого предмета, а в query пиши тему задания (например «ударения» или «квадратные уравнения»), не название задачи целиком. Для Википедии и Викисловаря query это точное название статьи или слово, для MDN название темы по-английски, для YouTube тема и слово «урок».',
 		'Страницы (id: название, что на ней):',
@@ -84,17 +85,13 @@ export function buildMaterialsMessages(goal: { title: string }, stage: PlanStage
 	];
 }
 
-// A web search is always a working address, so a task the AI found no real page for still gets somewhere to start.
-export function searchMaterial(goalTitle: string, taskTitle: string, hint: string | null): PlanMaterial {
-	const query = `${hint ?? taskTitle} ${goalTitle}`.replace(/\s+/g, ' ').trim().slice(0, 150);
-	return { kind: 'other', title: `Найти в поиске: ${taskTitle}`.slice(0, MAX_TITLE + 40), url: `https://www.google.com/search?q=${encodeURIComponent(query)}`, source: null };
-}
-
-// Every task keeps what the AI found; one with no working page also gets the search link.
-export function withSearchLinks(goalTitle: string, stages: PlanStage[]): PlanStage[] {
+// A task the AI found no page for is not sent to a web search (a long task title is a useless query).
+// It gets the site's own AI helper, which is always there and can explain the task.
+export const HELPER_URL = '/chat';
+export function withHelperFallback(stages: PlanStage[]): PlanStage[] {
 	return stages.map((s) => ({
 		...s,
-		tasks: s.tasks.map((t) => (t.materials.some((m) => m.url) ? t : { ...t, materials: [...t.materials, searchMaterial(goalTitle, t.title, t.materials.find((m) => m.source)?.source ?? null)] }))
+		tasks: s.tasks.map((t) => (t.materials.length > 0 ? t : { ...t, materials: [{ kind: 'other' as const, title: 'Разобрать задачу с ИИ-помощником', url: HELPER_URL, source: 'Northstart' }] }))
 	}));
 }
 

@@ -17,6 +17,7 @@ async function opens(url) {
 
 let failed = 0;
 for (const page of PAGES) {
+	if (page.url.startsWith('/')) continue; // the site's own page
 	const problem = await opens(page.url);
 	console.log(`${problem ? 'FAIL' : 'ok  '} ${page.id} ${page.url}${problem ? ` (${problem})` : ''}`);
 	if (problem) failed++;

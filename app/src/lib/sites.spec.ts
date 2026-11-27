@@ -16,7 +16,7 @@ describe('the site list', () => {
 	it('keeps ids unique across pages and sites, and every page is an https address', () => {
 		const ids = [...PAGES.map((p) => p.id), ...SITES.map((s) => s.id)];
 		expect(new Set(ids).size).toBe(ids.length);
-		for (const p of PAGES) expect(p.url.startsWith('https://'), p.id).toBe(true);
+		for (const p of PAGES) expect(p.url.startsWith('https://') || /^\/[a-z]+$/.test(p.url), p.id).toBe(true);
 	});
 
 	it('has a Решу ОГЭ and a Решу ЕГЭ site for every school subject', () => {

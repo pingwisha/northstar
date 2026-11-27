@@ -22,6 +22,8 @@ export interface Site {
 }
 
 export const PAGES: readonly Page[] = [
+	{ id: 'northstart-chat', name: 'Чат с ИИ-помощником на сайте', url: '/chat', topics: 'обсудить тему с ИИ: объяснить проще, разобрать пример, составить план на неделю. Для задач вроде «обсудить с ИИ» и когда нет подходящей страницы' },
+	{ id: 'northstart-check', name: 'Проверь себя: вопросы от ИИ', url: '/check', topics: 'проверить, что тема усвоена: ИИ задаёт вопросы по теме, ошибки попадают в тетрадь ошибок' },
 	{ id: 'oge-rus-interview-texts', name: 'Решу ОГЭ: тексты итогового собеседования', url: 'https://ruso-oge.sdamgia.ru/test?theme=2', topics: 'итоговое собеседование по русскому языку (допуск к ОГЭ): тексты для чтения вслух, подготовка к чтению, интонация, ударения' },
 	{ id: 'rus-interview-texts-4ege', name: '10 текстов итогового собеседования', url: 'https://4ege.ru/gia-po-russkomu-jazyku/72883-10-tekstov-itogovogo-sobesedovanija.html', topics: 'итоговое собеседование по русскому языку: образцы текстов для чтения вслух' },
 	{ id: 'rus-interview-home', name: 'Решу ОГЭ: итоговое собеседование', url: 'https://ruso-oge.sdamgia.ru/', topics: 'итоговое собеседование по русскому языку: все четыре задания, пересказ, монолог, диалог' }

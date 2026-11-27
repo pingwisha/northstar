@@ -1,6 +1,6 @@
 // Building a plan with the AI: ask, read the answer, set the dates; materials and link checks follow per stage.
 import { daysUntil } from '../progress';
-import { buildMaterialsMessages, buildPlanMessages, parseMaterials, parsePlan, schedulePlan, targetTaskCount, withSearchLinks, type PlanStage, type ScheduledStage } from '../plan';
+import { buildMaterialsMessages, buildPlanMessages, parseMaterials, parsePlan, schedulePlan, targetTaskCount, withHelperFallback, type PlanStage, type ScheduledStage } from '../plan';
 import { askAi, type AiCaller, type AiEnv } from './ai';
 import { resolveDirect } from './resolve';
 
@@ -18,15 +18,31 @@ export async function fillStageMaterials(
 	stage: PlanStage,
 	send?: typeof fetch
 ): Promise<{ ok: true; stage: PlanStage } | { ok: false; error: PlanError }> {
-	const answer = await askAi(env, caller, buildMaterialsMessages(goal, stage), { json: true, maxTokens: 3000, timeoutMs: 60_000, temperature: 0.3, fetch: send, allowMember: true });
-	if (!answer.ok && (answer.error === 'limit_reached' || answer.error === 'service_busy' || answer.error === 'not_available')) return { ok: false, error: answer.error };
-	const found = answer.ok ? parseMaterials(answer.content, stage.tasks.length) : null;
-	// A search address becomes the page itself where the site allows it (resolve.ts); otherwise it stays.
-	const withMaterials: PlanStage = {
-		...stage,
-		tasks: await Promise.all(stage.tasks.map(async (t, j) => ({ ...t, materials: found?.[j] ? await Promise.all(found[j].map((m) => resolveDirect(m, send))) : t.materials })))
+	const ask = async (tasks: PlanStage['tasks']) => {
+		const answer = await askAi(env, caller, buildMaterialsMessages(goal, { ...stage, tasks }), { json: true, maxTokens: 3000, timeoutMs: 60_000, temperature: 0.3, fetch: send, allowMember: true });
+		return answer;
 	};
-	const [checked] = withSearchLinks(goal.title, [withMaterials]);
+	const stop = (e: string) => e === 'limit_reached' || e === 'service_busy' || e === 'not_available';
+	const first = await ask(stage.tasks);
+	if (!first.ok && stop(first.error)) return { ok: false, error: first.error as PlanError };
+	const found = first.ok ? parseMaterials(first.content, stage.tasks.length) : null;
+	let tasks = stage.tasks.map((t, j) => ({ ...t, materials: found?.[j] ?? t.materials }));
+
+	// One more try for the tasks that got nothing, with only those tasks in front of the AI.
+	const empty = tasks.map((t, j) => [t, j] as const).filter(([t]) => t.materials.length === 0);
+	if (empty.length > 0) {
+		const second = await ask(empty.map(([t]) => t));
+		if (!second.ok && stop(second.error)) return { ok: false, error: second.error as PlanError };
+		const again = second.ok ? parseMaterials(second.content, empty.length) : null;
+		tasks = tasks.map((t, j) => {
+			const k = empty.findIndex(([, idx]) => idx === j);
+			return k >= 0 && again?.[k]?.length ? { ...t, materials: again[k] } : t;
+		});
+	}
+
+	// A search address becomes the page itself where the site allows it (resolve.ts); the rest stays.
+	const resolved = await Promise.all(tasks.map(async (t) => ({ ...t, materials: await Promise.all(t.materials.map((m) => resolveDirect(m, send))) })));
+	const [checked] = withHelperFallback([{ ...stage, tasks: resolved }]);
 	return { ok: true, stage: checked };
 }
 

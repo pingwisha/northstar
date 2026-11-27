@@ -96,12 +96,12 @@ describe('generatePlan', () => {
 		expect(await usedToday(db, 'o')).toBe(2);
 	});
 
-	it('gives a stage whose materials cannot be made a search link for each task', async () => {
+	it('gives a stage whose materials cannot be made the AI helper for each task, never a web search', async () => {
 		const stage = { ...aiPlan.stages[1], tasks: aiPlan.stages[1].tasks.map((t) => ({ ...t, materials: [] })) };
 		const r = await fillStageMaterials(env(), owner, goal, stage, web(JSON.stringify(aiPlan), () => 'не json') as unknown as typeof fetch);
 		if (!r.ok) throw new Error(r.error);
 		expect(r.stage.tasks[0].materials).toHaveLength(1);
-		expect(r.stage.tasks[0].materials[0].url).toContain('https://www.google.com/search?q=');
+		expect(r.stage.tasks[0].materials[0].url).toBe('/chat');
 	});
 
 	it('reports a spent limit instead of filling the stage', async () => {

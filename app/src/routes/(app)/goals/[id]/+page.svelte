@@ -57,6 +57,17 @@
 		</section>
 	{/if}
 
+	{#if data.own.length > 0}
+		<section class="flex flex-col gap-3" data-testid="goal-own-tasks">
+			<h2 class="font-semibold">Мои задачи</h2>
+			<ul class="flex flex-col gap-3">
+				{#each data.own as task (task.id)}
+					<TaskRow {task} today={data.today} />
+				{/each}
+			</ul>
+		</section>
+	{/if}
+
 	{#if card.description}
 		<p class="whitespace-pre-line rounded-md bg-muted px-3 py-2 text-sm" data-testid="goal-description">{card.description}</p>
 	{/if}
@@ -86,16 +97,6 @@
 		</section>
 	{/each}
 
-	{#if data.own.length > 0}
-		<section class="flex flex-col gap-3" data-testid="goal-own-tasks">
-			<h2 class="font-semibold">Мои задачи</h2>
-			<ul class="flex flex-col gap-3">
-				{#each data.own as task (task.id)}
-					<TaskRow {task} today={data.today} />
-				{/each}
-			</ul>
-		</section>
-	{/if}
 
 	<p class="text-sm text-muted-foreground">Нажми на карандаш у задачи: там можно написать заметку, добавить свой материал (ссылку или несколько слов), переименовать, перенести и удалить задачу.</p>
 </main>

@@ -54,11 +54,11 @@ describe('materials for tasks the person added by hand', () => {
 		expect(send.mock.calls.length).toBe(calls);
 	});
 
-	it('gets a search link for a task when the AI finds nothing', async () => {
+	it('gets the AI helper for a task when the AI finds nothing', async () => {
 		vi.stubGlobal('fetch', ai('не json'));
 		const { me, goalId } = await setup();
 		await run('fillTasks', 'o', 'owner', goalId);
-		expect((await me.listMaterials())[0].url).toContain('https://www.google.com/search?q=');
+		expect((await me.listMaterials())[0].url).toBe('/chat');
 	});
 
 	it('does not touch another person\'s goal', async () => {
