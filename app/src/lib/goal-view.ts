@@ -7,6 +7,8 @@ export interface GoalData {
 	title: string;
 	description: string | null;
 	deadline: string;
+	start_date?: string;
+	created_at?: string;
 	status: 'active' | 'done' | 'archived';
 	study_days?: number;
 	color?: string;
@@ -26,6 +28,8 @@ export interface GoalCard {
 	title: string;
 	description: string | null;
 	deadline: string;
+	startDate: string;
+	createdAt: string;
 	status: GoalData['status'];
 	studyDays: number;
 	color: string;
@@ -56,6 +60,8 @@ export function buildCards(goals: GoalData[], tasks: TaskData[], today: string):
 			title: g.title,
 			description: g.description,
 			deadline: g.deadline,
+			startDate: g.start_date ?? '',
+			createdAt: g.created_at ?? '',
 			status: g.status,
 			studyDays: g.study_days ?? 127,
 			color: colorOf(g.color),
@@ -72,4 +78,33 @@ export function buildCards(goals: GoalData[], tasks: TaskData[], today: string):
 
 	const overall = overallPercent(goals.map((g) => ({ status: g.status, tasks: (byGoal.get(g.id) ?? []).map(toInput) })));
 	return { cards, overall };
+}
+
+export const SORT_KEYS = ['newest', 'oldest', 'title', 'deadline', 'start', 'progress', 'behind'] as const;
+export type SortKey = (typeof SORT_KEYS)[number];
+export const SORT_LABELS: Record<SortKey, string> = {
+	newest: 'Сначала новые',
+	oldest: 'Сначала старые',
+	title: 'По алфавиту',
+	deadline: 'По дате окончания',
+	start: 'По дате начала',
+	progress: 'По прогрессу (больше сначала)',
+	behind: 'Сначала отстающие'
+};
+export const isSortKey = (v: unknown): v is SortKey => typeof v === 'string' && (SORT_KEYS as readonly string[]).includes(v);
+
+const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+
+// A sorted copy; ties keep the order the cards came in.
+export function sortCards<T extends Pick<GoalCard, 'title' | 'deadline' | 'startDate' | 'createdAt' | 'percent' | 'daysLeft'>>(cards: readonly T[], key: SortKey): T[] {
+	const by: Record<SortKey, (a: T, b: T) => number> = {
+		newest: (a, b) => cmp(b.createdAt, a.createdAt),
+		oldest: (a, b) => cmp(a.createdAt, b.createdAt),
+		title: (a, b) => a.title.localeCompare(b.title, 'ru', { sensitivity: 'base' }),
+		deadline: (a, b) => cmp(a.deadline, b.deadline),
+		start: (a, b) => cmp(a.startDate, b.startDate),
+		progress: (a, b) => b.percent - a.percent,
+		behind: (a, b) => a.percent - b.percent
+	};
+	return cards.map((c, i) => ({ c, i })).sort((x, y) => by[key](x.c, y.c) || x.i - y.i).map((x) => x.c);
 }

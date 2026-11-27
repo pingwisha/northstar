@@ -112,3 +112,41 @@ export async function resolveDirect(material: PlanMaterial, send: typeof fetch =
 		return material;
 	}
 }
+
+// A material is concrete when it is a page itself: not a site search and not a site's home page.
+export function isConcrete(m: PlanMaterial): boolean {
+	if (!m.url) return false;
+	if (m.url.startsWith('/')) return true;
+	if (searchOrigin(m.url)) return false;
+	return !SITES.some((s) => s.base === m.url);
+}
+
+const MAX_PER_TASK = 3;
+const cleanPhrase = (title: string) => title.replace(/\d+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100);
+
+// Gives a task concrete pages, several where possible: the pages already found, then an article
+// and a video found for the same phrase. Searches and home pages stay only when nothing concrete was found.
+export async function makeConcrete<T extends { title: string; materials: PlanMaterial[] }>(task: T, send: typeof fetch = fetch): Promise<T> {
+	const resolved = await Promise.all(task.materials.map((m) => resolveDirect(m, send)));
+	const concrete = resolved.filter(isConcrete);
+	const phrase = (resolved.map((m) => (m.url ? searchOrigin(m.url)?.phrase : undefined)).find(Boolean) ?? cleanPhrase(task.title)) || task.title;
+	const have = new Set(concrete.map((m) => m.url));
+	const extras: [string, PlanMaterial['kind'], string, string][] = [
+		['wikipedia-ru', 'article', 'Статья', 'Википедия'],
+		['youtube', 'video', 'Видео', 'YouTube']
+	];
+	for (const [id, kind, label, source] of extras) {
+		if (concrete.length >= MAX_PER_TASK) break;
+		if (concrete.some((m) => m.source === source || m.source === id)) continue;
+		try {
+			const url = await FINDERS[id](phrase, send);
+			if (url && !have.has(url)) {
+				have.add(url);
+				concrete.push({ kind, title: `${label}: ${phrase}`, url, source });
+			}
+		} catch {
+			// This extra is simply skipped.
+		}
+	}
+	return { ...task, materials: concrete.length > 0 ? concrete.slice(0, MAX_PER_TASK) : resolved };
+}

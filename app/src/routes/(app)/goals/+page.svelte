@@ -6,10 +6,32 @@
 	import { WEEKDAYS, formatDate } from '$lib/goals';
 	import { GOAL_COLORS, GOAL_COLOR_NAMES, GOAL_ICONS, GOAL_ICON_KEYS, GOAL_ICON_NAMES } from '$lib/goal-look';
 	import Illustration from '$lib/components/Illustration.svelte';
+	import { SORT_KEYS, SORT_LABELS, isSortKey, sortCards, type SortKey } from '$lib/goal-view';
+	import { onMount } from 'svelte';
 
 	let { data, form } = $props();
 
-	const active = $derived(data.cards.filter((c) => c.status === 'active'));
+	// The order is remembered in this browser only.
+	let sortKey = $state<SortKey>('deadline');
+	onMount(() => {
+		try {
+			const saved = localStorage.getItem('goal-sort');
+			if (isSortKey(saved)) sortKey = saved;
+		} catch {
+			// Without storage the default order stays.
+		}
+	});
+	function chooseSort(e: Event) {
+		const v = (e.currentTarget as HTMLSelectElement).value;
+		if (!isSortKey(v)) return;
+		sortKey = v;
+		try {
+			localStorage.setItem('goal-sort', v);
+		} catch {
+			// Not remembered, still applied.
+		}
+	}
+	const active = $derived(sortCards(data.cards.filter((c) => c.status === 'active'), sortKey));
 	const finished = $derived(data.cards.filter((c) => c.status === 'done'));
 	const archived = $derived(data.cards.filter((c) => c.status === 'archived'));
 	let adding = $state(page.url.searchParams.has('add'));
@@ -116,6 +138,15 @@
 
 	{#if form?.action === 'add' && form.ok && form.planMessage}
 		<p role="status" class="rounded-md bg-muted p-3 text-sm" data-testid="plan-note">Цель добавлена, но план пока не построился. {form.planMessage} Нажми «Построить план» у цели, когда сможешь.</p>
+	{/if}
+
+	{#if active.length > 1}
+		<label class="flex items-center gap-2 text-sm text-muted-foreground">
+			Порядок
+			<select class="h-10 min-w-0 flex-1 rounded-md border bg-background px-2 text-foreground" value={sortKey} onchange={chooseSort} data-testid="goal-sort">
+				{#each SORT_KEYS as k (k)}<option value={k}>{SORT_LABELS[k]}</option>{/each}
+			</select>
+		</label>
 	{/if}
 
 	<ul class="flex flex-col gap-4" data-testid="goal-list">

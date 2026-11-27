@@ -2,7 +2,7 @@
 import { daysUntil } from '../progress';
 import { buildMaterialsMessages, buildPlanMessages, parseMaterials, parsePlan, schedulePlan, targetTaskCount, withHelperFallback, type PlanStage, type ScheduledStage } from '../plan';
 import { askAi, type AiCaller, type AiEnv } from './ai';
-import { resolveDirect } from './resolve';
+import { makeConcrete } from './resolve';
 
 const PLAN_TIMEOUT_MS = 90_000;
 const PLAN_MAX_TOKENS = 8192;
@@ -41,7 +41,7 @@ export async function fillStageMaterials(
 	}
 
 	// A search address becomes the page itself where the site allows it (resolve.ts); the rest stays.
-	const resolved = await Promise.all(tasks.map(async (t) => ({ ...t, materials: await Promise.all(t.materials.map((m) => resolveDirect(m, send))) })));
+	const resolved = await Promise.all(tasks.map((t) => makeConcrete(t, send)));
 	const [checked] = withHelperFallback([{ ...stage, tasks: resolved }]);
 	return { ok: true, stage: checked };
 }

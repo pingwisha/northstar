@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { resolveDirect } from '../src/lib/server/resolve';
+import { makeConcrete, resolveDirect } from '../src/lib/server/resolve';
 import { buildMaterialUrl } from '../src/lib/sites';
 import type { PlanMaterial } from '../src/lib/plan';
 
@@ -59,5 +59,25 @@ describe('resolveDirect: Решу ОГЭ topic pages', () => {
 	it('keeps the search when nothing matches', async () => {
 		const r = await find('варианты');
 		expect(r.url).toContain('/search?search=');
+	});
+});
+
+describe('makeConcrete', () => {
+	const send = vi.fn(async (url: unknown) => {
+		const u = String(url);
+		if (u.includes('wikipedia.org')) return new Response(JSON.stringify(['x', ['Резюме'], [''], ['https://ru.wikipedia.org/wiki/%D0%A0']]));
+		if (u.includes('youtube.com')) return new Response('"videoId":"1OJiyT4xz5g"');
+		return new Response('', { status: 500 });
+	}) as unknown as typeof fetch;
+
+	it('replaces a bare search by an article and a video for the same phrase', async () => {
+		const t = await makeConcrete({ title: 'Составить резюме', materials: [{ kind: 'other', title: 'Яндекс', url: buildMaterialUrl('yandex', 'как составить резюме'), source: 'Яндекс' }] }, send);
+		expect(t.materials.map((m) => m.url)).toEqual(['https://ru.wikipedia.org/wiki/%D0%A0', 'https://www.youtube.com/watch?v=1OJiyT4xz5g']);
+	});
+
+	it('keeps the search when nothing concrete can be found', async () => {
+		const down = vi.fn(async () => new Response('', { status: 500 })) as unknown as typeof fetch;
+		const m = { kind: 'other' as const, title: 'Яндекс', url: buildMaterialUrl('yandex', 'резюме'), source: 'Яндекс' };
+		expect((await makeConcrete({ title: 'Резюме', materials: [m] }, down)).materials).toEqual([m]);
 	});
 });

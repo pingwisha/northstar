@@ -88,7 +88,7 @@
 <!-- Outside the sticky header on purpose: a fixed bar nested in a sticky one can vanish on phones while scrolling. -->
 	<nav
 		aria-label="Разделы"
-		class="fixed inset-x-0 bottom-0 z-30 flex justify-around border-t bg-background/90 px-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-md lg:inset-x-auto lg:bottom-auto lg:left-0 lg:top-[5.5rem] lg:w-60 lg:flex-col lg:justify-start lg:gap-1 lg:border-0 lg:bg-transparent lg:px-3 lg:pb-0 lg:pt-0 lg:backdrop-blur-none"
+		class="fixed inset-x-0 bottom-0 z-30 transform-gpu flex justify-around border-t bg-background/90 px-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-md lg:inset-x-auto lg:bottom-auto lg:left-0 lg:top-[5.5rem] lg:w-60 lg:flex-col lg:justify-start lg:gap-1 lg:border-0 lg:bg-transparent lg:px-3 lg:pb-0 lg:pt-0 lg:backdrop-blur-none"
 	>
 		{#each tabs as tab (tab.href)}
 			<a
