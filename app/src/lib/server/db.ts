@@ -3,7 +3,7 @@
 // invite helpers are the exceptions: they run before a user id exists, or on
 // behalf of the owner, whose role the caller has already checked.
 
-import type { PlanStage, ScheduledStage } from '$lib/plan';
+import type { PlanMaterial, PlanStage, ScheduledStage } from '$lib/plan';
 import type { NewTrial, Trial } from '$lib/trials';
 import type { Mistake, NewMistake } from '$lib/mistakes';
 
@@ -386,6 +386,23 @@ export function scoped(db: D1Database, userId: string) {
 					return [];
 				}
 			});
+		},
+
+		// Materials found after the plan was accepted. A task that already has any keeps what it has.
+		async addPlanMaterials(items: { taskId: string; materials: PlanMaterial[] }[]): Promise<void> {
+			const have = new Set((await db.prepare('SELECT DISTINCT task_id FROM materials WHERE user_id = ?').bind(userId).all<{ task_id: string }>()).results.map((r) => r.task_id));
+			const statements: D1PreparedStatement[] = [];
+			for (const item of items) {
+				if (have.has(item.taskId)) continue;
+				for (const m of item.materials) {
+					statements.push(
+						db
+							.prepare('INSERT INTO materials (id, user_id, task_id, kind, title, url, source) SELECT ?, ?, t.id, ?, ?, ?, ? FROM tasks t WHERE t.id = ? AND t.user_id = ?')
+							.bind(crypto.randomUUID(), userId, m.kind, m.title, m.url, m.source, item.taskId, userId)
+					);
+				}
+			}
+			if (statements.length > 0) await db.batch(statements);
 		},
 
 		async discardDraft(goalId: string): Promise<void> {

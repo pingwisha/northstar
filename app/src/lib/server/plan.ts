@@ -1,4 +1,4 @@
-// Building a plan with the AI: ask, read the answer, check the links, set the dates.
+// Building a plan with the AI: ask, read the answer, set the dates; materials and link checks follow per stage.
 import { daysUntil } from '../progress';
 import { buildMaterialsMessages, buildPlanMessages, parseMaterials, parsePlan, schedulePlan, targetTaskCount, withSearchLinks, type PlanStage, type ScheduledStage } from '../plan';
 import { askAi, type AiCaller, type AiEnv } from './ai';
@@ -41,19 +41,22 @@ export async function verifyLinks(stages: PlanStage[], send: typeof fetch = fetc
 	}));
 }
 
-// Second pass: one request per stage, all at once. A stage whose request fails simply has no
-// materials; the plan itself is still good. Returns how many stages came out without them.
-export async function addMaterials(env: AiEnv, caller: AiCaller, goal: { title: string }, stages: PlanStage[], send?: typeof fetch): Promise<{ stages: PlanStage[]; missing: number }> {
-	const results = await Promise.all(
-		stages.map(async (stage) => {
-			const answer = await askAi(env, caller, buildMaterialsMessages(goal, stage), { json: true, maxTokens: 3000, timeoutMs: 60_000, temperature: 0.3, fetch: send, allowMember: true });
-			return answer.ok ? parseMaterials(answer.content, stage.tasks.length) : null;
-		})
-	);
-	return {
-		stages: stages.map((stage, i) => ({ ...stage, tasks: stage.tasks.map((t, j) => ({ ...t, materials: results[i]?.[j] ?? t.materials })) })),
-		missing: results.filter((r) => r === null).length
-	};
+// Second step, run per stage after the plan is shown: the AI names materials, every address is
+// opened, and a task with no working page gets the search link. A stage the AI cannot answer
+// still gets search links, so the plan is never left bare. Only a spent limit is an error.
+export async function fillStageMaterials(
+	env: AiEnv,
+	caller: AiCaller,
+	goal: { title: string },
+	stage: PlanStage,
+	send?: typeof fetch
+): Promise<{ ok: true; stage: PlanStage } | { ok: false; error: PlanError }> {
+	const answer = await askAi(env, caller, buildMaterialsMessages(goal, stage), { json: true, maxTokens: 3000, timeoutMs: 60_000, temperature: 0.3, fetch: send, allowMember: true });
+	if (!answer.ok && (answer.error === 'limit_reached' || answer.error === 'service_busy' || answer.error === 'not_available')) return { ok: false, error: answer.error };
+	const found = answer.ok ? parseMaterials(answer.content, stage.tasks.length) : null;
+	const withMaterials: PlanStage = { ...stage, tasks: stage.tasks.map((t, j) => ({ ...t, materials: found?.[j] ?? t.materials })) };
+	const [checked] = withSearchLinks(goal.title, await verifyLinks([withMaterials], send));
+	return { ok: true, stage: checked };
 }
 
 export interface PlanDeps {
@@ -80,9 +83,8 @@ export async function generatePlan(
 		}
 		const parsed = parsePlan(answer.content);
 		if (!parsed.ok) continue;
-		const withMaterials = await addMaterials(env, caller, goal, parsed.stages, deps.fetch);
-		const checked = withSearchLinks(goal.title, await verifyLinks(withMaterials.stages, deps.fetch));
-		return { ok: true, stages: schedulePlan(checked, today, goal.deadline, goal.study_days), draft: checked, missingMaterials: withMaterials.missing };
+		// Materials come later, stage by stage (fillStageMaterials), so the plan appears quickly.
+		return { ok: true, stages: schedulePlan(parsed.stages, today, goal.deadline, goal.study_days), draft: parsed.stages, missingMaterials: parsed.stages.length };
 	}
 	return { ok: false, error: 'bad_answer' };
 }

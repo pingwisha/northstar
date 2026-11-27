@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
+	import { deserialize, enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import ProgressRing from '$lib/components/ProgressRing.svelte';
 	import { WEEKDAYS, formatDate } from '$lib/goals';
@@ -15,6 +16,34 @@
 	let creating = $state(false);
 	let editing = $state<string | null>(null);
 	let planning = $state<string | null>(null);
+
+	// Step two of the plan: materials, one stage at a time, started by the page itself.
+	let filling = $state(false);
+	let gaveUp = $state(false);
+	const stuck = new Set<string>();
+	const hasPending = $derived(Object.values(data.pending).some((l) => l.length > 0));
+	$effect(() => {
+		if (filling) return;
+		const next = Object.entries(data.pending).flatMap(([goalId, list]) => list.map((stage) => [goalId, stage] as const)).find(([g, i]) => !stuck.has(`${g}:${i}`));
+		if (!next) return;
+		filling = true;
+		const [goalId, stage] = next;
+		const body = new FormData();
+		body.set('id', goalId);
+		body.set('stage', String(stage));
+		void (async () => {
+			try {
+				const res = await fetch('?/materials', { method: 'POST', body, headers: { 'x-sveltekit-action': 'true' } });
+				const result = deserialize(await res.text());
+				if (result.type !== 'success') { stuck.add(`${goalId}:${stage}`); gaveUp = true; }
+			} catch {
+				stuck.add(`${goalId}:${stage}`);
+				gaveUp = true;
+			}
+			await invalidateAll();
+			filling = false;
+		})();
+	});
 
 	const paceClass = { on_track: 'text-foreground', ahead: 'text-foreground', behind: 'text-destructive' } as const;
 </script>
@@ -33,6 +62,10 @@
 			Добавить цель
 		</button>
 	</div>
+
+	{#if hasPending && !gaveUp}
+		<p class="text-sm text-muted-foreground" role="status" data-testid="materials-status">Подбираю материалы к задачам…</p>
+	{/if}
 
 	{#if adding || (form?.action === 'add' && form.message)}
 		<form method="POST" action="?/add" use:enhance={() => {
@@ -193,7 +226,7 @@
 							disabled={planning !== null}
 							class="h-11 w-full rounded-md px-4 text-sm font-medium disabled:opacity-60 {proposal ? 'border' : 'bg-primary text-primary-foreground'}"
 						>
-							{planning === card.id ? 'ИИ строит план, это займёт 2-3 минуты…' : proposal ? 'Предложить другой план (ещё один запрос к ИИ)' : 'Построить план'}
+							{planning === card.id ? 'ИИ строит план, это займёт около минуты…' : proposal ? 'Предложить другой план (ещё один запрос к ИИ)' : 'Построить план'}
 						</button>
 					</form>
 					{#if form?.action === 'plan' && form.goalId === card.id && 'message' in form && form.message}

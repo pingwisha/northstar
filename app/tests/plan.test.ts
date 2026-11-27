@@ -3,7 +3,7 @@ import type { Miniflare } from 'miniflare';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { actions, load } from '../src/routes/(app)/goals/+page.server';
 import { scoped } from '../src/lib/server/db';
-import { addMaterials, generatePlan, verifyLinks } from '../src/lib/server/plan';
+import { fillStageMaterials, generatePlan, verifyLinks } from '../src/lib/server/plan';
 import { AI_BASE_URL, usedToday } from '../src/lib/server/ai';
 import { makeDb } from './helpers';
 
@@ -56,9 +56,10 @@ const env = () => ({ DB: db, GEMINI_API_KEY: 'k' });
 
 describe('verifyLinks', () => {
 	it('keeps working links, turns dead ones into hints and drops dead ones without a hint', async () => {
-		const withMaterials = await addMaterials(env(), owner, goal, aiPlan.stages.map((s) => ({ ...s, tasks: s.tasks.map((t) => ({ ...t, materials: [] })) })), web() as unknown as typeof fetch);
-		const out = await verifyLinks(withMaterials.stages, web() as unknown as typeof fetch);
-		const m = out[0].tasks[0].materials;
+		const stage = { ...aiPlan.stages[0], tasks: aiPlan.stages[0].tasks.map((t) => ({ ...t, materials: [] })) };
+		const filled = await fillStageMaterials(env(), owner, goal, stage, web() as unknown as typeof fetch);
+		if (!filled.ok) throw new Error(filled.error);
+		const m = filled.stage.tasks[0].materials;
 		expect(m.map((x: { title: string; url: string | null }) => [x.title, x.url])).toEqual([['Хорошая статья', 'https://good.example/a'], ['Выдуманное видео', null]]);
 	});
 
@@ -75,8 +76,9 @@ describe('generatePlan', () => {
 		if (!r.ok) throw new Error(r.error);
 		const dates = r.stages.flatMap((s) => s.tasks.map((t) => t.plannedFor));
 		expect(dates).toHaveLength(3);
-		expect(r.missingMaterials).toBe(0);
-		expect(r.stages[0].tasks[0].materials.map((m) => m.url)).toEqual(['https://good.example/a', null]);
+		// The plan comes without materials; they are asked for per stage afterwards.
+		expect(r.missingMaterials).toBe(2);
+		expect(r.stages.flatMap((s) => s.tasks).every((t) => t.materials.length === 0)).toBe(true);
 		expect(dates.every((d) => d >= '2026-11-18' && d <= goal.deadline)).toBe(true);
 	});
 
@@ -92,18 +94,23 @@ describe('generatePlan', () => {
 		});
 		const r = await generatePlan(env(), owner, goal, '2026-11-18', { fetch: send as unknown as typeof fetch });
 		expect(r.ok).toBe(true);
-		// two for the plan, one for materials of each of the two stages
-		expect(await usedToday(db, 'o')).toBe(4);
+		// two for the plan; materials are asked for later, per stage
+		expect(await usedToday(db, 'o')).toBe(2);
 	});
 
-	it('keeps the plan when materials for a stage cannot be made, and says how many stages lack them', async () => {
-		const r = await generatePlan(env(), owner, goal, '2026-11-18', { fetch: web(JSON.stringify(aiPlan), (stage) => (stage === 'Практика' ? 'не json' : JSON.stringify(materialsFor[stage]))) as unknown as typeof fetch });
+	it('gives a stage whose materials cannot be made a search link for each task', async () => {
+		const stage = { ...aiPlan.stages[1], tasks: aiPlan.stages[1].tasks.map((t) => ({ ...t, materials: [] })) };
+		const r = await fillStageMaterials(env(), owner, goal, stage, web(JSON.stringify(aiPlan), () => 'не json') as unknown as typeof fetch);
 		if (!r.ok) throw new Error(r.error);
-		expect(r.stages.flatMap((s) => s.tasks)).toHaveLength(3);
-		// A stage with no materials from the AI still gets a search link for each task.
-		expect(r.stages[1].tasks[0].materials).toHaveLength(1);
-		expect(r.stages[1].tasks[0].materials[0].url).toContain('https://www.google.com/search?q=');
-		expect(r.stages[0].tasks[0].materials.length).toBeGreaterThan(0);
+		expect(r.stage.tasks[0].materials).toHaveLength(1);
+		expect(r.stage.tasks[0].materials[0].url).toContain('https://www.google.com/search?q=');
+	});
+
+	it('reports a spent limit instead of filling the stage', async () => {
+		const stage = { ...aiPlan.stages[1], tasks: aiPlan.stages[1].tasks.map((t) => ({ ...t, materials: [] })) };
+		await db.prepare('INSERT INTO ai_usage (user_id, day, count) VALUES (?, ?, 1)').bind('m', new Date().toISOString().slice(0, 10)).run();
+		const r = await fillStageMaterials({ DB: db, GEMINI_API_KEY: 'k', MEMBER_DAILY_LIMIT: '1' } as never, { userId: 'm', role: 'member' }, goal, stage, web() as unknown as typeof fetch);
+		expect(r).toEqual({ ok: false, error: 'limit_reached' });
 	});
 
 	it('builds a plan for a member too', async () => {
@@ -161,7 +168,7 @@ describe('saving a plan', () => {
 
 describe('the plan action', () => {
 	type Event = Parameters<NonNullable<typeof actions.plan>>[0];
-	const call = (name: 'plan' | 'acceptPlan' | 'discardPlan', userId: string, role: 'owner' | 'member', id: string, extra: [string, string][] = [], environment: object = env()) => {
+	const call = (name: 'plan' | 'acceptPlan' | 'discardPlan' | 'materials', userId: string, role: 'owner' | 'member', id: string, extra: [string, string][] = [], environment: object = env()) => {
 		const body = new FormData();
 		body.set('id', id);
 		for (const [k, v] of extra) body.append(k, v);
@@ -179,6 +186,43 @@ describe('the plan action', () => {
 		const drafts = await scoped(db, 'o').listDrafts();
 		expect(drafts).toHaveLength(1);
 		expect(drafts[0].stages.flatMap((s) => s.tasks)).toHaveLength(3);
+	});
+
+	it('fills the draft stage by stage, only once, and not for someone else\'s goal', async () => {
+		const send = web();
+		vi.stubGlobal('fetch', send);
+		const id = await scoped(db, 'o').addGoal({ ...goal, deadline: '2030-01-01' }, '2026-11-18');
+		await run('o', 'owner', id);
+		expect((await scoped(db, 'o').listDrafts())[0].missing).toBe(2);
+		expect(await call('materials', 'o', 'owner', id, [['stage', '0']])).toMatchObject({ ok: true });
+		let draft = (await scoped(db, 'o').listDrafts())[0];
+		expect(draft.stages[0].tasks[0].materials.map((m) => m.url)).toEqual(['https://good.example/a', null]);
+		expect(draft.missing).toBe(1);
+		const calls = send.mock.calls.length;
+		await call('materials', 'o', 'owner', id, [['stage', '0']]);
+		expect(send.mock.calls.length).toBe(calls);
+		await call('materials', 'o', 'owner', id, [['stage', '1']]);
+		draft = (await scoped(db, 'o').listDrafts())[0];
+		expect(draft.missing).toBe(0);
+		expect(draft.stages[1].tasks[0].materials).toHaveLength(1);
+		expect(await call('materials', 'm', 'member', id, [['stage', '0']])).toMatchObject({ status: 404 });
+		expect(await call('materials', 'o', 'owner', id, [['stage', '9']])).toMatchObject({ status: 404 });
+	});
+
+	it('accepts the plan before the materials are found and adds them to the tasks afterwards', async () => {
+		vi.stubGlobal('fetch', web());
+		const id = await scoped(db, 'o').addGoal({ ...goal, deadline: '2030-01-01' }, '2026-11-18');
+		await run('o', 'owner', id);
+		await call('acceptPlan', 'o', 'owner', id);
+		const pendingOf = async () => ((await load({ locals: { userId: 'o', role: 'owner' }, platform: { env: env() } } as unknown as Parameters<NonNullable<typeof load>>[0])) as { pending: Record<string, number[]> }).pending[id];
+		expect(await pendingOf()).toEqual([0, 1]);
+		await call('materials', 'o', 'owner', id, [['stage', '0']]);
+		await call('materials', 'o', 'owner', id, [['stage', '1']]);
+		expect(await pendingOf()).toBeUndefined();
+		const first = (await tasksOf('o')).find((t) => t.title === 'Прочитать главу 1')!;
+		const mine = (await scoped(db, 'o').listMaterials()).filter((m) => m.task_id === first.id);
+		expect(mine.map((m) => m.url)).toEqual(['https://good.example/a', null]);
+		expect(await scoped(db, 'm').listMaterials()).toHaveLength(0);
 	});
 
 	it('accepts the draft, saves the plan and removes the draft', async () => {

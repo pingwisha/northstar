@@ -6,7 +6,7 @@ import { scoped } from '$lib/server/db';
 import { replan, schedulePlan, type PlanStage } from '$lib/plan';
 import { buildStages } from '$lib/stages';
 import { daysUntil } from '$lib/progress';
-import { generatePlan, type PlanError } from '$lib/server/plan';
+import { fillStageMaterials, generatePlan, type PlanError } from '$lib/server/plan';
 import { appEnv } from '$lib/server/env';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -20,7 +20,7 @@ async function mine(locals: App.Locals, platform: App.Platform | undefined) {
 export const load: PageServerLoad = async ({ locals, platform }) => {
 	const me = await mine(locals, platform);
 	const today = todayIso(undefined, locals.timezone);
-	const [goals, tasks, drafts, stages] = await Promise.all([me.listGoals(), me.listGoalTasks(), me.listDrafts(), me.listStages()]);
+	const [goals, tasks, drafts, stages, materials] = await Promise.all([me.listGoals(), me.listGoalTasks(), me.listDrafts(), me.listStages(), me.listMaterials()]);
 	// A proposed plan is shown dated from today, so a draft left for a few days is never stale.
 	const proposals = drafts.flatMap((d) => {
 		const goal = goals.find((g) => g.id === d.goalId && g.status === 'active');
@@ -31,7 +31,20 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 	const stagesByGoal = Object.fromEntries(
 		goals.map((g) => [g.id, buildStages(stages.filter((s) => s.goal_id === g.id), tasks.filter((t) => t.goal_id === g.id))])
 	);
-	return { today, ...buildCards(goals, tasks, today), proposals, stagesByGoal };
+	// Stages whose tasks still wait for materials, by goal: the page fills them one by one after showing the plan.
+	const withMaterial = new Set(materials.map((m) => m.task_id));
+	const pending: Record<string, number[]> = {};
+	for (const d of drafts) {
+		if (tasks.some((t) => t.goal_id === d.goalId)) continue;
+		pending[d.goalId] = d.stages.flatMap((s, i) => (s.tasks.some((t) => t.materials.length === 0) ? [i] : []));
+	}
+	for (const g of goals) {
+		if (g.status !== 'active') continue;
+		const own = stages.filter((s) => s.goal_id === g.id);
+		const idx = own.flatMap((s, i) => (tasks.some((t) => t.stage_id === s.id && !withMaterial.has(t.id)) ? [i] : []));
+		if (idx.length > 0) pending[g.id] = idx;
+	}
+	return { today, ...buildCards(goals, tasks, today), proposals, stagesByGoal, pending };
 };
 
 // The proposed plan as the page shows it: every task has a flat number the person can untick.
@@ -178,6 +191,43 @@ export const actions: Actions = {
 		const drafted = await draftPlan(me, env, locals, goal, todayIso(undefined, locals.timezone));
 		if (!drafted.ok) return fail(drafted.status, { action: 'plan', goalId, message: drafted.message });
 		return { action: 'plan', ok: true, goalId };
+	},
+
+	// Step two of building a plan: materials for one stage (by its position), written into the
+	// draft, or into the tasks when the draft was already accepted. Safe to repeat.
+	materials: async ({ request, locals, platform }) => {
+		const env = await appEnv(platform);
+		const me = await mine(locals, platform);
+		const data = await request.formData();
+		const goalId = field(data, 'id');
+		const index = Number(field(data, 'stage'));
+		const goal = (await me.listGoals()).find((g) => g.id === goalId && g.status === 'active');
+		if (!goal || !Number.isInteger(index) || index < 0) return fail(404, { action: 'materials', goalId, message: 'Такой цели нет.' });
+		if (!env) return fail(403, { action: 'materials', goalId, message: PLAN_MESSAGES.not_available });
+		const caller = { userId: locals.userId!, role: locals.role ?? 'member' };
+		const goalTasks = (await me.listGoalTasks()).filter((t) => t.goal_id === goal.id);
+
+		if (goalTasks.length === 0) {
+			const draft = (await me.listDrafts()).find((d) => d.goalId === goal.id);
+			const stage = draft?.stages[index];
+			if (!draft || !stage) return fail(404, { action: 'materials', goalId, message: 'Черновика плана нет.' });
+			if (!stage.tasks.some((t) => t.materials.length === 0)) return { action: 'materials', ok: true, goalId };
+			const filled = await fillStageMaterials(env, caller, goal, stage);
+			if (!filled.ok) return fail(filled.error === 'not_available' ? 403 : 429, { action: 'materials', goalId, message: PLAN_MESSAGES[filled.error] });
+			const stages = draft.stages.map((s, i) => (i === index ? filled.stage : s));
+			await me.saveDraft(goal.id, stages, stages.filter((s) => s.tasks.some((t) => t.materials.length === 0)).length);
+			return { action: 'materials', ok: true, goalId };
+		}
+
+		const row = (await me.listStages()).filter((s) => s.goal_id === goal.id)[index];
+		if (!row) return fail(404, { action: 'materials', goalId, message: 'Такого этапа нет.' });
+		const have = new Set((await me.listMaterials()).map((m) => m.task_id));
+		const waiting = goalTasks.filter((t) => t.stage_id === row.id && !have.has(t.id));
+		if (waiting.length === 0) return { action: 'materials', ok: true, goalId };
+		const filled = await fillStageMaterials(env, caller, goal, { title: row.title, tasks: waiting.map((t) => ({ title: t.title, weight: t.weight, materials: [] })) });
+		if (!filled.ok) return fail(filled.error === 'not_available' ? 403 : 429, { action: 'materials', goalId, message: PLAN_MESSAGES[filled.error] });
+		await me.addPlanMaterials(waiting.map((t, i) => ({ taskId: t.id, materials: filled.stage.tasks[i].materials })));
+		return { action: 'materials', ok: true, goalId };
 	},
 
 	// The person accepted the draft, maybe without some tasks. The dates are laid out again from today.
