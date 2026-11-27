@@ -14,7 +14,7 @@
 		today: string;
 		day?: string;
 		label?: string;
-		form?: { action?: string; message?: string; values?: { goalId: string; titles: string; day: string } } | null;
+		form?: { action?: string; message?: string; values?: { goalId: string; titles?: string; day?: string; text?: string } } | null;
 	} = $props();
 	let open = $state(false);
 	const failed = $derived(form?.action === 'addTask' && form.message ? form : null);

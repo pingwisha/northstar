@@ -37,3 +37,16 @@ test('checking a task changes the percent at once', async ({ page, context }) =>
 	const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 	expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test('a quick line with a day in the text creates a task on that day', async ({ page, context }) => {
+	seedDb(`INSERT OR IGNORE INTO goals (id, user_id, title, start_date, deadline) VALUES ('home-g', '${E2E.home.id}', 'Выучить 100 слов', '${todayIso()}', '2030-01-01')`);
+	seedDb(`DELETE FROM tasks WHERE title LIKE '%quick-e2e%'`);
+	await signInAs(context, E2E.home);
+	await page.goto('/');
+	const form = page.getByTestId('quick-add');
+	await expect(async () => {
+		await form.getByLabel('Быстрая задача').fill('сегодня в 18:00 quick-e2e проверка');
+		await form.getByRole('button', { name: 'Добавить' }).click();
+		await expect(page.getByTestId('task').filter({ hasText: '18:00' })).toBeVisible({ timeout: 2500 });
+	}).toPass({ timeout: 20000 });
+});

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import AddTask from '$lib/components/AddTask.svelte';
+	import QuickAdd from '$lib/components/QuickAdd.svelte';
 	import TaskRow from '$lib/components/TaskRow.svelte';
 	import ProgressRing from '$lib/components/ProgressRing.svelte';
 	import { formatDate } from '$lib/goals';
@@ -144,6 +145,8 @@
 		{#if form && 'message' in form && form.message && form.action !== 'addTask'}
 			<p role="alert" class="text-sm text-destructive">{form.message}</p>
 		{/if}
+
+		<QuickAdd goals={home.goals} {form} />
 
 		<AddTask goals={home.goals} today={data.today} {form} />
 

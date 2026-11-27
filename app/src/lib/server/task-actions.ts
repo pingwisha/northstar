@@ -3,6 +3,7 @@
 import { error, fail, type RequestEvent } from '@sveltejs/kit';
 import { todayIso } from '$lib/goals';
 import { MAX_OWN_MATERIALS, parseNote, parseOwnMaterial } from '$lib/materials';
+import { parseQuickTask } from '$lib/quick-task';
 import { MAX_TASKS_TOTAL, parseOneTitle, parseTaskDay, parseTaskTitles } from '$lib/tasks';
 import { scoped } from './db';
 import { fillStageMaterials, type PlanError } from './plan';
@@ -50,6 +51,24 @@ export const taskActions = {
 		if (!day.ok) return fail(400, { action: 'addTask', message: day.message, values });
 		if (!(await me.addTasks(goal.id, titles.value, day.value))) return fail(404, { action: 'addTask', message: 'Выбери цель из списка.', values });
 		return { action: 'addTask', ok: true };
+	},
+
+	// One line with the day in the text: "завтра в 18:00 решить варианты". A line without a day goes to today.
+	quickAdd: async (event: RequestEvent) => {
+		const me = await mine(event);
+		const data = await event.request.formData();
+		const values = { goalId: field(data, 'goalId'), text: field(data, 'text') };
+		const goal = (await me.listGoals()).find((g) => g.id === values.goalId && g.status === 'active');
+		if (!goal) return fail(404, { action: 'quickAdd', message: 'Выбери цель из списка.', values });
+		const today = todayIso(undefined, event.locals.timezone);
+		const quick = parseQuickTask(values.text, today);
+		const title = parseOneTitle(quick.title || undefined);
+		if (!title.ok) return fail(400, { action: 'quickAdd', message: values.text.trim() ? 'Кроме дня в строке нужно написать, что сделать.' : 'Напиши название задачи.', values });
+		if ((await me.countTasks()) + 1 > MAX_TASKS_TOTAL) return fail(400, { action: 'quickAdd', message: `Всего можно хранить не больше ${MAX_TASKS_TOTAL} задач. Удали ненужные.`, values });
+		const day = parseTaskDay(quick.day ?? today, today, goal.deadline);
+		if (!day.ok) return fail(400, { action: 'quickAdd', message: day.message, values });
+		if (!(await me.addTasks(goal.id, [title.value], day.value))) return fail(404, { action: 'quickAdd', message: 'Выбери цель из списка.', values });
+		return { action: 'quickAdd', ok: true };
 	},
 
 	// Materials for the tasks the person added by hand to a goal: the AI picks pages from the verified lists.
