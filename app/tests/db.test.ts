@@ -28,7 +28,7 @@ describe('foundation schema', () => {
 		const { results } = await db
 			.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE '_cf_%' AND name NOT LIKE 'sqlite_%'")
 			.all<{ name: string }>();
-		expect(results.map((r) => r.name).sort()).toEqual(['ai_usage', 'chat_messages', 'chats', 'goals', 'invites', 'materials',
+		expect(results.map((r) => r.name).sort()).toEqual(['ai_usage', 'chat_messages', 'chats', 'friend_invites', 'friendships', 'goals', 'invites', 'materials',
 			'mistakes', 'plan_drafts', 'push_subscriptions', 'stages', 'tasks', 'trials', 'users']);
 	});
 
@@ -58,7 +58,7 @@ describe('foundation schema', () => {
 		await run("INSERT INTO push_subscriptions (id, user_id, endpoint, timezone, hour) VALUES ('p1', 'u1', 'https://fcm.googleapis.com/fcm/send/x', 'UTC', 9)");
 		await run("DELETE FROM users WHERE id = 'u1'");
 		for (const table of ['goals', 'tasks', 'materials',
-			'mistakes', 'plan_drafts', 'push_subscriptions', 'chats', 'chat_messages', 'ai_usage']) {
+			'mistakes', 'plan_drafts', 'push_subscriptions', 'chats', 'chat_messages', 'ai_usage', 'friend_invites', 'friendships']) {
 			expect(await count(table)).toBe(0);
 		}
 	});

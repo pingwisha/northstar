@@ -36,6 +36,7 @@
 		{ href: '/mistakes', label: 'Тетрадь ошибок', short: 'Ошибки', phone: false, icon: 'M4 4h12a4 4 0 014 4v12H8a4 4 0 01-4-4V4zM8 9h8M8 13h5' },
 		{ href: '/report', label: 'Недельный отчёт', short: 'Отчёт', phone: false, icon: 'M7 3h8l4 4v14H7zM15 3v4h4M10 12h6M10 16h6' },
 		{ href: '/exam', label: 'Режим экзамена', short: 'Экзамен', phone: false, icon: 'M12 7v5l3 2M12 21a9 9 0 100-18 9 9 0 000 18z' },
+		{ href: '/friends', label: 'Друзья', short: 'Друзья', phone: false, icon: 'M16 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2M9.5 11a4 4 0 100-8 4 4 0 000 8zM21 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8' },
 		{ href: '/chat', label: 'Чат с ИИ', short: 'Чат', icon: 'M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z' },
 		...(data.role === 'owner'
 			? [

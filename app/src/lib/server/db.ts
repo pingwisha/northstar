@@ -134,6 +134,7 @@ export function scoped(db: D1Database, userId: string) {
 				pushSubscriptions: await all('SELECT endpoint, timezone, hour, created_at FROM push_subscriptions WHERE user_id = ?'),
 				planDrafts: await all('SELECT goal_id, plan, missing, created_at FROM plan_drafts WHERE user_id = ?'),
 				mistakes: await all('SELECT id, goal_id, topic, note, created_at, fixed_at, review_step, review_due FROM mistakes WHERE user_id = ? ORDER BY created_at, rowid'),
+				friends: (await this.listFriends()).map((f) => ({ nickname: f.nickname, since: f.since })),
 				chatMessages: await all('SELECT chat_id, role, content, created_at FROM chat_messages WHERE user_id = ? ORDER BY created_at, rowid')
 			};
 		},
@@ -313,6 +314,50 @@ export function scoped(db: D1Database, userId: string) {
 
 		async deleteMistake(id: string): Promise<boolean> {
 			const r = await db.prepare('DELETE FROM mistakes WHERE id = ? AND user_id = ?').bind(id, userId).run();
+			return (r.meta.changes ?? 0) > 0;
+		},
+
+		// Friends. Only what the person themselves owns or is part of.
+		async countActiveInvites(now: string): Promise<number> {
+			return (await db.prepare('SELECT COUNT(*) AS n FROM friend_invites WHERE user_id = ? AND used_at IS NULL AND expires_at > ?').bind(userId, now).first<{ n: number }>())!.n;
+		},
+
+		async countFriends(): Promise<number> {
+			return (await db.prepare('SELECT COUNT(*) AS n FROM friendships WHERE user_a = ?1 OR user_b = ?1').bind(userId).first<{ n: number }>())!.n;
+		},
+
+		async createInvite(tokenHash: string, nickname: string, expiresAt: string): Promise<void> {
+			await db.prepare('INSERT INTO friend_invites (id, user_id, token_hash, nickname, expires_at) VALUES (?, ?, ?, ?, ?)').bind(crypto.randomUUID(), userId, tokenHash, nickname, expiresAt).run();
+		},
+
+		async listInvites(now: string): Promise<{ id: string; nickname: string; expiresAt: string }[]> {
+			const rows = (
+				await db
+					.prepare('SELECT id, nickname, expires_at FROM friend_invites WHERE user_id = ? AND used_at IS NULL AND expires_at > ? ORDER BY created_at, rowid')
+					.bind(userId, now)
+					.all<{ id: string; nickname: string; expires_at: string }>()
+			).results;
+			return rows.map((r) => ({ id: r.id, nickname: r.nickname, expiresAt: r.expires_at }));
+		},
+
+		async deleteInvite(id: string): Promise<boolean> {
+			const r = await db.prepare('DELETE FROM friend_invites WHERE id = ? AND user_id = ?').bind(id, userId).run();
+			return (r.meta.changes ?? 0) > 0;
+		},
+
+		// The friend is named only by the nickname they chose; never an email, a Google name or an id.
+		async listFriends(): Promise<{ id: string; nickname: string; since: string }[]> {
+			const rows = (
+				await db
+					.prepare('SELECT id, CASE WHEN user_a = ?1 THEN nick_b ELSE nick_a END AS nickname, created_at FROM friendships WHERE user_a = ?1 OR user_b = ?1 ORDER BY created_at, rowid')
+					.bind(userId)
+					.all<{ id: string; nickname: string; created_at: string }>()
+			).results;
+			return rows.map((r) => ({ id: r.id, nickname: r.nickname, since: r.created_at }));
+		},
+
+		async endFriendship(id: string): Promise<boolean> {
+			const r = await db.prepare('DELETE FROM friendships WHERE id = ?1 AND (user_a = ?2 OR user_b = ?2)').bind(id, userId).run();
 			return (r.meta.changes ?? 0) > 0;
 		},
 
