@@ -21,6 +21,16 @@ test('on a phone the rare sections are behind «Ещё» and the bottom bar stay
 	await expect(bar.getByRole('link', { name: 'Ещё' })).toHaveAttribute('aria-current', 'page');
 });
 
+test('on a phone the bottom bar stays on screen on the home page after scrolling', async ({ page, context }) => {
+	await signInAs(context, E2E.zone);
+	await page.goto('/');
+	const bar = page.getByRole('navigation', { name: 'Разделы' });
+	await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+	await expect(bar).toBeInViewport({ ratio: 1 });
+	const box = await bar.boundingBox();
+	expect(Math.round(box!.y + box!.height)).toBe(844);
+});
+
 test('on a wide screen every section has its own place in the side menu', async ({ page, context }) => {
 	await page.setViewportSize({ width: 1280, height: 800 });
 	await signInAs(context, E2E.zone);

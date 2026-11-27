@@ -62,23 +62,6 @@
 			Northstart
 		</a>
 
-		<nav
-			aria-label="Разделы"
-			class="fixed inset-x-0 bottom-0 z-20 flex justify-around border-t bg-background/90 px-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-md lg:static lg:inset-auto lg:flex-col lg:justify-start lg:gap-1 lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none"
-		>
-			{#each tabs as tab (tab.href)}
-				<a
-					href={tab.href}
-					aria-current={here(tab.href) ? 'page' : undefined}
-					aria-label={tab.label}
-					class="{'phone' in tab && tab.phone === false ? 'max-lg:hidden ' : ''}{'desktop' in tab && tab.desktop === false ? 'lg:hidden ' : ''}flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-0.5 text-[10.5px] font-medium transition-colors lg:min-h-10 lg:w-full lg:flex-none lg:flex-row lg:justify-start lg:gap-3 lg:px-3 lg:text-sm {here(tab.href) ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}"
-				>
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="lg:size-[18px]" aria-hidden="true"><path d={tab.icon} /></svg>
-					<span class="text-center leading-tight lg:hidden">{tab.short}</span>
-					<span class="hidden text-center leading-tight lg:inline">{tab.label}</span>
-				</a>
-			{/each}
-		</nav>
 
 		<div class="flex items-center gap-2 lg:mt-auto lg:justify-between lg:px-1">
 			<button type="button" onclick={cycle} class="flex size-9 items-center justify-center rounded-full border text-muted-foreground hover:text-foreground" data-testid="theme-toggle" aria-label={THEME_LABEL[theme]} title={THEME_LABEL[theme]}>
@@ -101,6 +84,25 @@
 		</div>
 	</div>
 </header>
+
+<!-- Outside the sticky header on purpose: a fixed bar nested in a sticky one can vanish on phones while scrolling. -->
+	<nav
+		aria-label="Разделы"
+		class="fixed inset-x-0 bottom-0 z-30 flex justify-around border-t bg-background/90 px-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-md lg:inset-x-auto lg:bottom-auto lg:left-0 lg:top-[5.5rem] lg:w-60 lg:flex-col lg:justify-start lg:gap-1 lg:border-0 lg:bg-transparent lg:px-3 lg:pb-0 lg:pt-0 lg:backdrop-blur-none"
+	>
+		{#each tabs as tab (tab.href)}
+			<a
+				href={tab.href}
+				aria-current={here(tab.href) ? 'page' : undefined}
+				aria-label={tab.label}
+				class="{'phone' in tab && tab.phone === false ? 'max-lg:hidden ' : ''}{'desktop' in tab && tab.desktop === false ? 'lg:hidden ' : ''}flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-0.5 text-[10.5px] font-medium transition-colors lg:min-h-10 lg:w-full lg:flex-none lg:flex-row lg:justify-start lg:gap-3 lg:px-3 lg:text-sm {here(tab.href) ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}"
+			>
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="lg:size-[18px]" aria-hidden="true"><path d={tab.icon} /></svg>
+				<span class="text-center leading-tight lg:hidden">{tab.short}</span>
+				<span class="hidden text-center leading-tight lg:inline">{tab.label}</span>
+			</a>
+		{/each}
+	</nav>
 
 <div class="pb-24 lg:pb-8 lg:pl-60">
 	{@render children()}
