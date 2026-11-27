@@ -141,7 +141,10 @@
 				</p>
 
 				{#if card.taskCount > 0}
-					<a href="/goals/{card.id}" class="inline-flex h-10 items-center self-start rounded-md border px-3 text-sm" data-testid="open-goal">Все задачи цели ({card.taskCount})</a>
+					<div class="flex flex-wrap gap-2">
+						<a href="/goals/{card.id}" class="inline-flex h-10 items-center rounded-md border px-3 text-sm" data-testid="open-goal">Все задачи цели ({card.taskCount})</a>
+						<a href="/goals/{card.id}#edit-plan" class="inline-flex h-10 items-center rounded-md border px-3 text-sm" data-testid="edit-plan-link">Изменить план</a>
+					</div>
 				{/if}
 
 				{#if editing === card.id}

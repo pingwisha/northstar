@@ -46,6 +46,17 @@
 		</div>
 	</header>
 
+	{#if data.active}
+		<section id="edit-plan" class="flex scroll-mt-4 flex-col gap-2" data-testid="edit-plan">
+			<AddTask goals={[{ id: data.goalId, title: card.title, deadline: data.deadline }]} today={data.today} {form} label="Изменить план: добавить пункт" />
+			<p class="text-sm text-muted-foreground">Напиши, что хочешь добавить в план. ИИ сам подберёт к новому пункту материалы.</p>
+			{#if data.needMaterials && !gaveUp}
+				<p role="status" class="text-sm text-muted-foreground" data-testid="materials-status">Подбираю материалы к новым задачам…</p>
+			{/if}
+			{#if gaveUp}<p role="alert" class="text-sm text-destructive">{gaveUp}</p>{/if}
+		</section>
+	{/if}
+
 	{#if card.description}
 		<p class="whitespace-pre-line rounded-md bg-muted px-3 py-2 text-sm" data-testid="goal-description">{card.description}</p>
 	{/if}
@@ -83,17 +94,6 @@
 					<TaskRow {task} today={data.today} />
 				{/each}
 			</ul>
-		</section>
-	{/if}
-
-	{#if data.active}
-		<section class="flex flex-col gap-2" data-testid="edit-plan">
-			<AddTask goals={[{ id: data.goalId, title: card.title, deadline: data.deadline }]} today={data.today} {form} label="Изменить план: добавить пункт" />
-			<p class="text-sm text-muted-foreground">Напиши, что хочешь добавить в план. ИИ сам подберёт к новому пункту материалы.</p>
-			{#if data.needMaterials && !gaveUp}
-				<p role="status" class="text-sm text-muted-foreground" data-testid="materials-status">Подбираю материалы к новым задачам…</p>
-			{/if}
-			{#if gaveUp}<p role="alert" class="text-sm text-destructive">{gaveUp}</p>{/if}
 		</section>
 	{/if}
 
