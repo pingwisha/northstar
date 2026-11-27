@@ -44,3 +44,20 @@ describe('resolveDirect', () => {
 		expect(send).not.toHaveBeenCalled();
 	});
 });
+
+describe('resolveDirect: Решу ОГЭ topic pages', () => {
+	const catalog = `<a class="cat_name" href="/test?filter=all&category_id=6">Действия с обыкновенными дробями</a>
+<a class="cat_name" href="/test?filter=all&category_id=7">Линейные уравнения</a>
+<a class="cat_name" href="/test?filter=all&category_id=8">Системы линейных уравнений</a>`;
+	const find = async (phrase: string) => resolveDirect(material('oge-math', phrase), reply(catalog) as unknown as typeof fetch);
+
+	it('turns a search into the topic page, preferring the closest name', async () => {
+		expect((await find('линейные уравнения')).url).toBe('https://math-oge.sdamgia.ru/test?filter=all&category_id=7');
+		expect((await find('обыкновенные дроби')).url).toBe('https://math-oge.sdamgia.ru/test?filter=all&category_id=6');
+	});
+
+	it('keeps the search when nothing matches', async () => {
+		const r = await find('варианты');
+		expect(r.url).toContain('/search?search=');
+	});
+});
