@@ -103,7 +103,18 @@
 						<h3 class="text-sm font-medium">Слабые темы</h3>
 						<ul class="mt-1 flex flex-col gap-1 text-sm">
 							{#each b.summary.weak as w}
-								<li>{w.topic}<span class="text-muted-foreground">, {w.count} {w.count === 1 ? 'раз' : 'раза и больше'}</span></li>
+								<li data-testid="weak-topic">
+									{w.topic}<span class="text-muted-foreground">, {w.count} {w.count === 1 ? 'раз' : 'раза и больше'}</span>
+									{#if b.topicTasks[w.topic]?.length}
+										<ul class="ml-4 mt-1 list-disc">
+											{#each b.topicTasks[w.topic] as task (task.id)}
+												<li><a href="/goals/{b.goalId}" class="text-primary underline underline-offset-2">{task.title}</a></li>
+											{/each}
+										</ul>
+									{:else}
+										<a href="/goals/{b.goalId}" class="ml-1 text-primary underline underline-offset-2">Добавить пункт в план</a>
+									{/if}
+								</li>
 							{/each}
 						</ul>
 					</div>

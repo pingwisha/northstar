@@ -7,6 +7,7 @@ test.use({ viewport: { width: 390, height: 844 } });
 test('a person records practice test results and sees growth and weak topics', async ({ page, context }) => {
 	const today = todayIso();
 	seedDb(`INSERT INTO goals (id, user_id, title, start_date, deadline) VALUES ('tr-g', '${E2E.trials.id}', 'Сдать ОГЭ', '${today}', '2030-01-01')`);
+	seedDb(`INSERT INTO tasks (id, user_id, goal_id, title, planned_for) VALUES ('tr-t', '${E2E.trials.id}', 'tr-g', 'Сложение дробей', '${today}')`);
 	await signInAs(context, E2E.trials);
 	await page.goto('/trials');
 
@@ -29,6 +30,9 @@ test('a person records practice test results and sees growth and weak topics', a
 	await expect(page.getByTestId('trial-summary')).toContainText('+20');
 	await expect(page.getByTestId('weak-topics')).toContainText('Дроби, 2');
 	await expect(page.getByRole('img', { name: /50%, 70%/ })).toBeVisible();
+	// A weak topic points to the goal's tasks about it, or offers to add one.
+	await expect(page.getByTestId('weak-topic').filter({ hasText: 'Дроби' }).getByRole('link', { name: 'Сложение дробей' })).toHaveAttribute('href', '/goals/tr-g');
+	await expect(page.getByTestId('weak-topic').filter({ hasText: 'Графики' }).getByRole('link', { name: 'Добавить пункт в план' })).toBeVisible();
 
 	// A score above the maximum is explained.
 	await page.getByRole('button', { name: 'Записать результат' }).click();

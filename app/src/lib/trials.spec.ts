@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseTopics, parseTrial, summarizeTrials, type Trial } from './trials';
+import { parseTopics, parseTrial, summarizeTrials, tasksForTopic, type Trial } from './trials';
 
 const today = '2026-11-20';
 const ok = { title: 'Пробник 1', day: '2026-11-10', score: '21', maxScore: '30', topics: '' };
@@ -48,5 +48,24 @@ describe('summarizeTrials', () => {
 	it('counts weak topics, most frequent first', () => {
 		const s = summarizeTrials([t('a', '2026-11-01', 15, 'Дроби, Графики'), t('b', '2026-11-05', 18, 'дроби'), t('c', '2026-11-09', 20, 'Геометрия, Дроби')]);
 		expect(s.weak).toEqual([{ topic: 'Дроби', count: 3 }, { topic: 'Геометрия', count: 1 }, { topic: 'Графики', count: 1 }]);
+	});
+});
+
+describe('tasksForTopic', () => {
+	const t = (title: string, completedAt: string | null = null) => ({ title, completedAt });
+	it('matches by word stems, ignoring case and endings', () => {
+		const tasks = [t('Сложение дробей'), t('Степени'), t('ДРОБИ: вычитание')];
+		expect(tasksForTopic('Дроби', tasks).map((x) => x.title)).toEqual(['Сложение дробей', 'ДРОБИ: вычитание']);
+	});
+	it('needs every word of the topic', () => {
+		const tasks = [t('Обыкновенные дроби'), t('Десятичные дроби')];
+		expect(tasksForTopic('обыкновенные дроби', tasks)).toHaveLength(1);
+	});
+	it('skips finished tasks and keeps at most three', () => {
+		const tasks = [t('Дроби 1', '2026-11-01'), t('Дроби 2'), t('Дроби 3'), t('Дроби 4'), t('Дроби 5')];
+		expect(tasksForTopic('дроби', tasks).map((x) => x.title)).toEqual(['Дроби 2', 'Дроби 3', 'Дроби 4']);
+	});
+	it('finds nothing for an empty topic', () => {
+		expect(tasksForTopic('  ', [t('Дроби')])).toEqual([]);
 	});
 });

@@ -22,7 +22,7 @@ const run = (name: 'add' | 'delete', userId: string, fields: Record<string, stri
 	for (const [k, v] of Object.entries(fields)) body.set(k, v);
 	return actions[name]!({ request: new Request('http://localhost/', { method: 'POST', body }), locals: { userId }, platform: platform() } as never);
 };
-const page = (userId: string) => load({ locals: { userId }, platform: platform() } as never) as Promise<{ blocks: { goalId: string; summary: { last: number | null; weak: { topic: string; count: number }[] }; list: { id: string }[] }[] }>;
+const page = (userId: string) => load({ locals: { userId }, platform: platform() } as never) as Promise<{ blocks: { goalId: string; topicTasks: Record<string, { title: string }[]>; summary: { last: number | null; weak: { topic: string; count: number }[] }; list: { id: string }[] }[] }>;
 const goalFor = (userId: string) => scoped(db, userId).addGoal({ title: 'ЕГЭ', description: null, deadline: '2099-01-01' }, todayIso());
 const fields = (goalId: string, over: Record<string, string> = {}) => ({ goalId, title: 'Пробник 1', day: todayIso(), score: '21', maxScore: '30', topics: 'Дроби', ...over });
 
@@ -60,5 +60,21 @@ describe('trial results', () => {
 		await db.prepare("UPDATE goals SET status = 'done' WHERE id = ?").bind(goalId).run();
 		expect(await run('add', 'a', fields(goalId, { title: 'Ещё' }))).toMatchObject({ status: 404 });
 		expect((await page('a')).blocks[0].list).toHaveLength(1);
+	});
+
+	it('lists unfinished tasks of the same goal for each weak topic, never anothers', async () => {
+		const goalId = await goalFor('a');
+		const otherGoal = await goalFor('a');
+		const me = scoped(db, 'a');
+		await me.addTasks(goalId, ['Сложение дробей', 'Степени', 'Дроби: вычитание'], todayIso());
+		await me.addTasks(otherGoal, ['Дроби в другой цели'], todayIso());
+		await scoped(db, 'b').addGoal({ title: 'Чужая', description: null, deadline: '2099-01-01' }, todayIso());
+		const { id: doneId } = (await db.prepare("SELECT id FROM tasks WHERE title = 'Дроби: вычитание'").first<{ id: string }>())!;
+		await db.prepare("UPDATE tasks SET completed_at = '2026-11-01T10:00:00.000Z' WHERE id = ?").bind(doneId).run();
+		await run('add', 'a', fields(goalId, { topics: 'Дроби, Логарифмы' }));
+		const block = (await page('a')).blocks.find((b) => b.goalId === goalId)!;
+		expect(block.topicTasks['Дроби'].map((t) => t.title)).toEqual(['Сложение дробей']);
+		expect(block.topicTasks['Логарифмы']).toEqual([]);
+		expect((await page('b')).blocks.every((b) => Object.keys(b.topicTasks).length === 0)).toBe(true);
 	});
 });

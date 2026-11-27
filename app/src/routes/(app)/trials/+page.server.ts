@@ -2,7 +2,7 @@ import { error, fail } from '@sveltejs/kit';
 import { todayIso } from '$lib/goals';
 import { scoped } from '$lib/server/db';
 import { appEnv } from '$lib/server/env';
-import { MAX_TRIALS_TOTAL, parseTrial, summarizeTrials, scoreText } from '$lib/trials';
+import { MAX_TRIALS_TOTAL, parseTrial, summarizeTrials, scoreText, tasksForTopic } from '$lib/trials';
 import type { Actions, PageServerLoad } from './$types';
 
 async function mine(locals: App.Locals, platform: App.Platform | undefined) {
@@ -13,7 +13,7 @@ async function mine(locals: App.Locals, platform: App.Platform | undefined) {
 
 export const load: PageServerLoad = async ({ locals, platform }) => {
 	const me = await mine(locals, platform);
-	const [goals, trials] = await Promise.all([me.listGoals(), me.listTrials()]);
+	const [goals, trials, allTasks] = await Promise.all([me.listGoals(), me.listTrials(), me.listGoalTasks()]);
 	const titles = new Map(goals.map((g) => [g.id, g.title]));
 	const goalsWithTrials = goals.filter((g) => g.status === 'active' || trials.some((t) => t.goalId === g.id));
 	return {
@@ -22,10 +22,14 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 		// One block per goal: its own chart and weak topics.
 		blocks: goalsWithTrials.map((g) => {
 			const own = trials.filter((t) => t.goalId === g.id);
+			const tasks = allTasks.filter((t) => t.goal_id === g.id);
+			const summary = summarizeTrials(own);
 			return {
 				goalId: g.id,
 				goalTitle: titles.get(g.id)!,
-				summary: summarizeTrials(own),
+				summary,
+				// For each weak topic: the goal's unfinished tasks about it (listGoalTasks is already in day order).
+				topicTasks: Object.fromEntries(summary.weak.map((w) => [w.topic, tasksForTopic(w.topic, tasks.map((t) => ({ id: t.id, title: t.title, completedAt: t.completed_at })))])),
 				// Newest first for the list.
 				list: [...own].reverse().map((t) => ({ id: t.id, title: t.title, takenOn: t.takenOn, text: scoreText(t), weakTopics: t.weakTopics }))
 			};

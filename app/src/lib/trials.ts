@@ -105,3 +105,15 @@ export function summarizeTrials(trials: Trial[]): TrialSummary {
 }
 
 export const scoreText = (t: { score: number; maxScore: number }): string => `${num(t.score)} из ${num(t.maxScore)}`;
+
+export const MAX_TASKS_PER_TOPIC = 3;
+
+// The word stem used to match a topic against task titles: endings (-и, -ей, -ами) are cut off.
+const stem = (word: string): string => (word.length < 4 ? word : word.slice(0, Math.max(4, word.length - 2)));
+
+// Not finished tasks of one goal whose title has every word of the topic, in the order given (by day).
+export function tasksForTopic<T extends { title: string; completedAt: string | null }>(topic: string, tasks: readonly T[], limit = MAX_TASKS_PER_TOPIC): T[] {
+	const stems = topic.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean).map(stem);
+	if (!stems.length) return [];
+	return tasks.filter((t) => !t.completedAt && stems.every((s) => t.title.toLowerCase().includes(s))).slice(0, limit);
+}
