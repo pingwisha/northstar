@@ -28,7 +28,7 @@ Done when: (1) в `app/tests/plan.test.ts` и `goals.test.ts` есть тест�
 
 Done when: (1) `app/src/lib/sites.spec.ts`: все адреса https, id уникальны, `buildMaterialUrl` не принимает адрес от ИИ; (2) тест в `app/tests/plan.test.ts`: ответ ИИ с выдуманным адресом не попадает в материалы; (3) `node app/scripts/check-sites.mjs` проходит против интернета; (4) добавлено требование в `openspec/specs/plan-building/spec.md`; (5) проверки и публикация. Правило `ai-materials-only-from-the-list` продолжает выполняться.
 
-## Задача 3. Страница «Статистика» для владельца — `pending` (можно параллельно с задачей 2)
+## Задача 3. Страница «Статистика» для владельца — `done` (код и тесты, 2026-11-27; браузерный тест не написан)
 
 Контекст: решение 0073, правило `stats-hold-no-personal-data`, четыре измерителя в `docs/meters/`.
 

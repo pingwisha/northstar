@@ -39,7 +39,8 @@
 		{ href: '/chat', label: 'Чат с ИИ', short: 'Чат', icon: 'M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z' },
 		...(data.role === 'owner'
 			? [
-					{ href: '/family', label: 'Семья и доступ', short: 'Семья', phone: false, icon: 'M16 20v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1M9.5 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM21 20v-1a4 4 0 00-3-3.9M16 4.1a3.5 3.5 0 010 6.8' }
+					{ href: '/family', label: 'Семья и доступ', short: 'Семья', phone: false, icon: 'M16 20v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1M9.5 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM21 20v-1a4 4 0 00-3-3.9M16 4.1a3.5 3.5 0 010 6.8' },
+					{ href: '/stats', label: 'Статистика', short: 'Статистика', phone: false, icon: 'M4 20V10M10 20V4M16 20v-8M22 20H2' }
 				]
 			: []),
 		{ href: '/more', label: 'Ещё', short: 'Ещё', desktop: false, icon: 'M5 12h.01M12 12h.01M19 12h.01' }

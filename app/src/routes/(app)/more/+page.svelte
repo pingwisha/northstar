@@ -10,7 +10,12 @@
 		{ href: '/exam', title: 'Режим экзамена', text: 'Что осталось по неделям и повторение слабых тем.' },
 		{ href: '/settings', title: 'Настройки', text: 'Тема, цвет, размер текста и напоминания.' },
 		{ href: '/account', title: 'Мои данные', text: 'Скачать всё, что хранится, или удалить аккаунт.' },
-		...(data.role === 'owner' ? [{ href: '/family', title: 'Семья и доступ', text: 'Приглашения и сводка по сайту.' }] : []),
+		...(data.role === 'owner'
+			? [
+					{ href: '/family', title: 'Семья и доступ', text: 'Приглашения и сводка по сайту.' },
+					{ href: '/stats', title: 'Статистика', text: 'Четыре числа брифа: план, первые дни, возвращение.' }
+				]
+			: []),
 		{ href: 'mailto:northstart.help@gmail.com', title: 'Написать нам', text: 'Ошибка, вопрос или идея: northstart.help@gmail.com' }
 	]);
 </script>
